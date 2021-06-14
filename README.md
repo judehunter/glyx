@@ -25,7 +25,7 @@ store.getState() // {count: 2, expensive: 1024}
 
 ## TODO
 - [x] Basic proof of concept
-- [ ] Subscribers / listeners
+- [x] Subscribers / listeners (done: basic use case)
 - [ ] Comprehensive error handling, e.g. enforcing that the correct values are passed as dependencies. Includes TS support
 - [ ] First-class TS support
 - [ ] Exports for different frameworks, e.g. React, Vue, with specific APIs, like selectors

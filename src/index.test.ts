@@ -215,3 +215,36 @@ test("watchers - empty deps", () => {
 
   expect(recalcs).toEqual(1);
 });
+
+test('subscribe', async () => {
+  const store = createStore(() => {
+    const counter = state(10);
+
+    const increment = action(() => (counter.$ += 1));
+
+    return {counter, increment};
+  });
+  const listenerPromise = () =>
+    new Promise((res, rej) => {
+      store.subscribe((state) => {
+        res(state);
+      });
+      store.increment();
+    });
+  await expect(listenerPromise()).resolves.toStrictEqual({counter: 11});
+});
+
+test('mutate state during createStore', async () => {
+  const shouldThrow = () => {
+    createStore(() => {
+      const counter = state(10);
+
+      const increment = action(() => (counter.$ += 1));
+      increment();
+
+      return {counter, increment};
+    });
+  };
+
+  expect(shouldThrow).toThrow();
+});

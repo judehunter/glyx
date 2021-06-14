@@ -5,6 +5,15 @@
   "repository": "https://github.com/judehunter/glyx",
   "author": "judehunter <matisowagm@gmail.com>",
   "license": "MIT",
+  "keywords": [
+    "state manager",
+    "react",
+    "preact",
+    "svelte",
+    "atomic",
+    "state",
+    "declarative"
+  ],
   "scripts": {
     "test": "jest",
     "build": "tsc"

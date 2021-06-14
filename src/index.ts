@@ -2,13 +2,31 @@ import {filterObj, mapObj} from './utils';
 
 let GET_STATE: any = null;
 let GET_DEPENDENTS: any = null;
+let GET_NOTIFY: any = null;
 
 export const createStore = <R>(definition: () => R) => {
+  let listeners = [] as any[];
+  const subscribe = (listener: any) => {
+    listeners.push(listener);
+    return () =>
+      listeners.slice(
+        listeners.findIndex((x) => x === listener),
+        1,
+      );
+  };
+
+  const notify: {current: (obj?) => any | never} = {
+    current: () => {
+      throw new Error('You should not modify the state during the creation of the store');
+    },
+  };
+
   let state = {current: [] as any[]};
   let dependents = {current: [] as any[]};
 
   GET_STATE = () => state;
   GET_DEPENDENTS = () => dependents;
+  GET_NOTIFY = () => notify;
 
   const exposed = definition() as any;
   const exposedState = filterObj(exposed, ([, v]) => typeof v.__GLYX_STATE_IDX__ !== 'undefined');
@@ -16,19 +34,27 @@ export const createStore = <R>(definition: () => R) => {
 
   GET_STATE = null;
   GET_DEPENDENTS = null;
+  GET_NOTIFY = null;
 
   const getState = () => {
     return mapObj(exposedState, ([k, v]) => {
-      return [k, state!.current[v.__GLYX_STATE_IDX__].$];
+      return [k, state.current[v.__GLYX_STATE_IDX__].$];
     });
   };
 
-  return {getState, ...exposedRest} as any;
+  notify.current = (obj) => {
+    for (const l of listeners) {
+      l(getState());
+    }
+  };
+
+  return {getState, subscribe, ...exposedRest} as any;
 };
 
 export const state = <T>(init: T) => {
   const state = GET_STATE();
   const dependents = GET_DEPENDENTS();
+  const notify = GET_NOTIFY();
 
   const idx = state.current.length;
   const obj = {$: init, __GLYX_STATE_IDX__: idx};
@@ -37,6 +63,7 @@ export const state = <T>(init: T) => {
   return new Proxy(state.current[idx], {
     set: (obj, prop: string, value) => {
       obj[prop] = value;
+      notify.current(obj);
       for (const d of dependents.current) {
         if (d.dependsOn === '*' || d.dependsOn.find((x) => x.__GLYX_STATE_IDX__ === idx)) {
           if (d.type === 'derived') {
