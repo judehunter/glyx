@@ -1,6 +1,6 @@
 {
   "name": "glyx",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "repository": "https://github.com/judehunter/glyx",
   "author": "judehunter <matisowagm@gmail.com>",
   "license": "MIT",
@@ -20,7 +20,8 @@
   "sideEffects": false,
   "type": "module",
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
   },
   "engines": {
     "node": "^12.0.0 || ^14.0.0 || >=16.0.0"
