@@ -1,6 +1,6 @@
 {
   "name": "glyx",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "repository": "https://github.com/judehunter/glyx",
   "author": "judehunter <matisowagm@gmail.com>",
   "license": "MIT",
@@ -19,6 +19,7 @@
   },
   "sideEffects": false,
   "type": "module",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js",
     "./package.json": "./package.json"
