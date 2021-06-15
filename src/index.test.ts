@@ -234,7 +234,7 @@ test('subscribe', async () => {
   await expect(listenerPromise()).resolves.toStrictEqual({counter: 11});
 });
 
-test('mutate state during createStore', async () => {
+test.skip('mutate state during createStore', async () => {
   const shouldThrow = () => {
     createStore(() => {
       const counter = state(10);

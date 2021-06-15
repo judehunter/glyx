@@ -1,8 +1,28 @@
 import {filterObj, mapObj} from './utils';
 
+// declare const type: unique symbol;
+const __GLYX__ = Symbol('__GLYX__');
+// type Brand<Name extends string> = {readonly [__GLYX__]: Name};
+type AnyFn = (...args: any[]) => any;
+type GlyxMeta<T> = {readonly [__GLYX__]: T};
+type GlyxState<T> = {$: T} & GlyxMeta<{type: 'state', stateIdx: number}>;
+type GlyxAction<T extends AnyFn> = T & GlyxMeta<{type: 'action'}>;
+type GlyxObject = GlyxState<any> | GlyxAction<AnyFn>;
+
+type A<T> = keyof T extends infer R ? (R extends keyof T ? (T[R] extends GlyxState<any> ? R : never) : never) : never;
+type GetStateFromDefinition<T extends Record<string, any>> = {[P in keyof Pick<T, A<T>>]: Pick<T, A<T>>[P]};
+type TransformDefinition<T> = Omit<T, A<T>> & {getState(): GetStateFromDefinition<Pick<T, A<T>>>; subscribe: any};
+
+const isState = (val: any): val is GlyxState<any> => {
+  return val[__GLYX__]?.type === 'state'
+}
+const isAction = (val: any): val is GlyxState<any> => {
+  return val[__GLYX__]?.type === 'action';
+};
+
 let GET_INTERNALS: () => {state; dependents; notify} = null!;
 
-export const createStore = <R>(definition: () => R) => {
+export const createStore = <T extends Record<string, GlyxObject>>(definition: () => T) => {
   let listeners = [] as any[];
   const subscribe = (listener: any) => {
     listeners.push(listener);
@@ -13,11 +33,11 @@ export const createStore = <R>(definition: () => R) => {
       );
   };
 
-  let state = {current: [] as any[]};
+  let state = {current: [] as GlyxState<any>[]};
   let dependents = {current: [] as any[]};
   const notify: {current: (obj?) => any | never} = {
     current: () => {
-      throw new Error('You should not modify the state during the creation of the store');
+      // throw new Error('You should not modify the state during the creation of the store');
     },
   };
 
@@ -28,14 +48,14 @@ export const createStore = <R>(definition: () => R) => {
   });
 
   const exposed = definition() as any;
-  const exposedState = filterObj(exposed, ([, v]) => typeof v.__GLYX_STATE_IDX__ !== 'undefined');
-  const exposedRest = filterObj(exposed, ([, v]) => typeof v.__GLYX_STATE_IDX__ === 'undefined');
+  const exposedState = filterObj(exposed, ([, v]) => isState(v)) as Record<string, GlyxState<any>>;
+  const exposedActions = filterObj(exposed, ([, v]) => isAction(v)) as Record<string, GlyxAction<any>>;
 
   GET_INTERNALS = null!;
 
   const getState = () => {
     return mapObj(exposedState, ([k, v]) => {
-      return [k, state.current[v.__GLYX_STATE_IDX__].$];
+      return [k, state.current[v[__GLYX__].stateIdx].$];
     });
   };
 
@@ -45,48 +65,51 @@ export const createStore = <R>(definition: () => R) => {
     }
   };
 
-  return {getState, subscribe, ...exposedRest} as any;
+  return {getState, subscribe, ...exposedActions} as any as TransformDefinition<T>;
 };
 
 export const state = <T>(init: T) => {
   const {state, dependents, notify} = GET_INTERNALS();
 
   const idx = state.current.length;
-  const obj = {$: init, __GLYX_STATE_IDX__: idx};
+  const obj = {$: init, [__GLYX__]: {type: 'state', stateIdx: idx}};
   state.current = [...state.current, obj];
 
   return new Proxy(state.current[idx], {
     set: (obj, prop: string, value) => {
-      obj[prop] = value;
-      notify.current(obj);
+      const previousValue = obj[prop];
+      const newValue = value;
+      obj[prop] = newValue;
+      notify.current();
       for (const d of dependents.current) {
-        if (d.dependsOn === '*' || d.dependsOn.find((x) => x.__GLYX_STATE_IDX__ === idx)) {
+        if (d.dependsOn === '*' || d.dependsOn.find((x) => x[__GLYX__].stateIdx === idx)) {
           if (d.type === 'derived') {
             const v = d.cb();
             state.current[d.stateIdx].$ = v;
           } else if (d.type === 'watch') {
-            d.cb();
+            d.cb(newValue, previousValue);
           }
         }
       }
       return true;
     },
-  }) as typeof obj;
+  }) as GlyxState<T>;
 };
 
-export const action = (cb: (...args: any[]) => any) => {
-  return cb;
+export const action = <T extends (...args: any[]) => any>(cb: T) => {
+  cb[__GLYX__] = {type: 'action'};
+  return cb as GlyxAction<T>;
 };
 
 export const derived = <T>(cb: () => T, deps?) => {
   const {state, dependents} = GET_INTERNALS();
 
   const idx = state.current.length;
-  const stateObj = {$: cb(), __GLYX_STATE_IDX__: idx};
+  const stateObj = {$: cb(), [__GLYX__]: {type: 'state', stateIdx: idx}};
   const dependentObj = {type: 'derived', stateIdx: idx, dependsOn: deps ?? '*', cb};
   state.current = [...state.current, stateObj];
   dependents.current = [...dependents.current, dependentObj];
-  return stateObj;
+  return stateObj as GlyxState<T>;
 };
 
 export const watch = (cb: () => any, deps?) => {
