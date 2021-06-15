@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es2018",
     "lib": [
       "es2019",
       "es5",
@@ -9,8 +9,6 @@
       "dom.iterable"
     ],
     "allowJs": true,
-    "skipLibCheck": true,
-    "strictNullChecks": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "node",
@@ -19,16 +17,17 @@
     "strict": true,
     "noImplicitAny": false,
     "allowSyntheticDefaultImports": true,
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "declaration": true
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
     "src/**/*.js",
     "src/**/*.jsx",
-    // ".eslintrc.js"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "src/**/*.test.*"
   ],
 }

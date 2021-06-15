@@ -1,7 +1,6 @@
 {
   "name": "glyx",
-  "version": "0",
-  "main": "dist/index.js",
+  "version": "0.0.1",
   "repository": "https://github.com/judehunter/glyx",
   "author": "judehunter <matisowagm@gmail.com>",
   "license": "MIT",
@@ -17,6 +16,14 @@
   "scripts": {
     "test": "jest",
     "build": "tsc"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "engines": {
+    "node": "^12.0.0 || ^14.0.0 || >=16.0.0"
   },
   "devDependencies": {
     "@types/jest": "^26.0.23",
