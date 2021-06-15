@@ -1,8 +1,6 @@
 import {filterObj, mapObj} from './utils';
 
-let GET_STATE: any = null;
-let GET_DEPENDENTS: any = null;
-let GET_NOTIFY: any = null;
+let GET_INTERNALS: () => {state; dependents; notify} = null!;
 
 export const createStore = <R>(definition: () => R) => {
   let listeners = [] as any[];
@@ -15,26 +13,25 @@ export const createStore = <R>(definition: () => R) => {
       );
   };
 
+  let state = {current: [] as any[]};
+  let dependents = {current: [] as any[]};
   const notify: {current: (obj?) => any | never} = {
     current: () => {
       throw new Error('You should not modify the state during the creation of the store');
     },
   };
 
-  let state = {current: [] as any[]};
-  let dependents = {current: [] as any[]};
-
-  GET_STATE = () => state;
-  GET_DEPENDENTS = () => dependents;
-  GET_NOTIFY = () => notify;
+  GET_INTERNALS = () => ({
+    state,
+    dependents,
+    notify,
+  });
 
   const exposed = definition() as any;
   const exposedState = filterObj(exposed, ([, v]) => typeof v.__GLYX_STATE_IDX__ !== 'undefined');
   const exposedRest = filterObj(exposed, ([, v]) => typeof v.__GLYX_STATE_IDX__ === 'undefined');
 
-  GET_STATE = null;
-  GET_DEPENDENTS = null;
-  GET_NOTIFY = null;
+  GET_INTERNALS = null!;
 
   const getState = () => {
     return mapObj(exposedState, ([k, v]) => {
@@ -52,9 +49,7 @@ export const createStore = <R>(definition: () => R) => {
 };
 
 export const state = <T>(init: T) => {
-  const state = GET_STATE();
-  const dependents = GET_DEPENDENTS();
-  const notify = GET_NOTIFY();
+  const {state, dependents, notify} = GET_INTERNALS();
 
   const idx = state.current.length;
   const obj = {$: init, __GLYX_STATE_IDX__: idx};
@@ -84,8 +79,7 @@ export const action = (cb: (...args: any[]) => any) => {
 };
 
 export const derived = <T>(cb: () => T, deps?) => {
-  const state = GET_STATE();
-  const dependents = GET_DEPENDENTS();
+  const {state, dependents} = GET_INTERNALS();
 
   const idx = state.current.length;
   const stateObj = {$: cb(), __GLYX_STATE_IDX__: idx};
@@ -96,7 +90,7 @@ export const derived = <T>(cb: () => T, deps?) => {
 };
 
 export const watch = (cb: () => any, deps?) => {
-  const dependents = GET_DEPENDENTS();
+  const {dependents} = GET_INTERNALS();
   cb();
   const dependentObj = {
     type: 'watch',
