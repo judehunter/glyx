@@ -5,3 +5,6 @@ export const action = <T extends (...args: any[]) => any>(cb: T) => {
   return cb as GlyxAction<T>;
 };
 
+action.setter = <T>(state: GlyxState<T>) => {
+  return action((val: T) => (state.$ = val));
+};

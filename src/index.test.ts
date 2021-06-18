@@ -34,16 +34,52 @@ test('state and actions', () => {
   });
 })
 
-test("two independent stores", () => {
+test('action - passing arguments', () => {
+  const store = createStore(() => {
+    const counter = state(10);
+    const add = action((val) => (counter.$ += val));
+    return {counter, add};
+  });
+
+  expect(store.getState()).toStrictEqual({
+    counter: 10,
+  });
+
+  store.add(5);
+
+  expect(store.getState()).toStrictEqual({
+    counter: 15,
+  });
+});
+
+test('action.setter', () => {
+  const store = createStore(() => {
+    const counter = state(10);
+    const add = action.setter(counter);
+    return {counter, add};
+  });
+
+  expect(store.getState()).toStrictEqual({
+    counter: 10,
+  });
+
+  store.add((store.getState().counter as any) + 5);
+
+  expect(store.getState()).toStrictEqual({
+    counter: 15,
+  });
+});
+
+test('two independent stores', () => {
   const store1 = createStore(() => {
     const val = state(0);
     const increment = action(() => (val.$ += 1));
-    return { val, increment };
+    return {val, increment};
   });
   const store2 = createStore(() => {
     const val = state(10);
     const decrement = action(() => (val.$ -= 1));
-    return { val, decrement };
+    return {val, decrement};
   });
   expect(store1.getState()).toStrictEqual({
     val: 0,
