@@ -1,5 +1,13 @@
-import {GET_INTERNALS, SET_INTERNALS} from './internals';
-import {filterObj, GlyxAction, GlyxObject, GlyxState, mapObj, TransformDefinition, __GLYX__} from './utils';
+import {SET_INTERNALS} from './internals';
+import {filterObj, GlyxAction, GlyxObject, GlyxState, mapObj, __GLYX__} from './utils';
+
+type StateFromDefinition<T extends Record<string, any>> = {
+  [P in keyof T as T[P] extends GlyxState<any> ? P : never]: T[P]['$'];
+};
+type TransformDefinition<T> = Omit<T, keyof StateFromDefinition<T>> & {
+  getState(): StateFromDefinition<T>;
+  subscribe: any;
+};
 
 const isState = (val: any): val is GlyxState<any> => {
   return val[__GLYX__]?.type === 'state';
@@ -37,7 +45,7 @@ export const createStore = <T extends Record<string, GlyxObject>>(definition: ()
   const exposedState = filterObj(exposed, ([, v]) => isState(v)) as Record<string, GlyxState<any>>;
   const exposedActions = filterObj(exposed, ([, v]) => isAction(v)) as Record<string, GlyxAction<any>>;
 
-  SET_INTERNALS(null!)
+  SET_INTERNALS(null!);
 
   const getState = () => {
     return mapObj(exposedState, ([k, v]) => {
@@ -51,5 +59,9 @@ export const createStore = <T extends Record<string, GlyxObject>>(definition: ()
     }
   };
 
-  return {getState, subscribe, ...exposedActions} as any as TransformDefinition<T>;
+  return {
+    getState,
+    subscribe,
+    ...exposedActions,
+  } as any as TransformDefinition<T>;
 };
