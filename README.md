@@ -1,9 +1,8 @@
 # glyx
-The declarative state management library
+The declarative state management library. (*In the works*)
 
-*Work In Progress*
-
-## Basic Usage
+|`yarn add glyx`|`npm i glyx`|
+|---|---|
 ```ts
 const store = createStore(() => {
   const count = state(1)
@@ -26,6 +25,7 @@ store.getState() // {count: 2, expensive: 1024}
 ## TODO
 - [x] Basic proof of concept
 - [x] Subscribers / listeners (done: basic use case)
+- [x] Watchers - passing previous and new value
 - [ ] Comprehensive error handling, e.g. enforcing that the correct values are passed as dependencies. Includes TS support
 - [ ] First-class TS support
 - [ ] Exports for different frameworks, e.g. React, Vue, with specific APIs, like selectors

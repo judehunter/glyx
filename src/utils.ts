@@ -1,12 +1,28 @@
-export const filterObj = <T>(obj: T, cb: (val: [k: keyof T, v: T[keyof T]]) => any) => {
-  return Object.fromEntries(
-    Object.entries(obj).filter(cb as any)
-  );
+export const __GLYX__ = Symbol('__GLYX__');
+// type Brand<Name extends string> = {readonly [__GLYX__]: Name};
+export type AnyFn = (...args: any[]) => any;
+export type GlyxMeta<T> = {readonly [__GLYX__]: T};
+export type GlyxState<T> = {$: T} & GlyxMeta<{type: 'state'; stateIdx: number}>;
+export type GlyxAction<T extends AnyFn> = T & GlyxMeta<{type: 'action'}>;
+export type GlyxObject = GlyxState<any> | GlyxAction<AnyFn>;
+
+export type A<T> = keyof T extends infer R
+  ? R extends keyof T
+    ? T[R] extends GlyxState<any>
+      ? R
+      : never
+    : never
+  : never;
+export type GetStateFromDefinition<T extends Record<string, any>> = {[P in keyof Pick<T, A<T>>]: Pick<T, A<T>>[P]};
+export type TransformDefinition<T> = Omit<T, A<T>> & {
+  getState(): GetStateFromDefinition<Pick<T, A<T>>>;
+  subscribe: any;
 };
 
-export const mapObj = <T, R>(
-  obj: T,
-  cb: (val: [k: keyof T, v: T[keyof T]]) => R
-): R[] => {
+export const filterObj = <T>(obj: T, cb: (val: [k: keyof T, v: T[keyof T]]) => any) => {
+  return Object.fromEntries(Object.entries(obj).filter(cb as any));
+};
+
+export const mapObj = <T, R>(obj: T, cb: (val: [k: keyof T, v: T[keyof T]]) => R): R[] => {
   return Object.fromEntries(Object.entries(obj).map(cb as any)) as any;
 };

@@ -121,7 +121,6 @@ test("derived - empty deps", () => {
   let recalcs = 0;
   const store = createStore(() => {
     const counter = state(10);
-    // const hungry = state(true);
 
     const expensive = derived(() => {
       recalcs++;
@@ -149,6 +148,111 @@ test("derived - empty deps", () => {
     expensive: 20,
   });
 });
+
+test('derived - multiple deps', async () => {
+  let recalcs = 0;
+  const store = createStore(() => {
+    const foo = state(10);
+    const bar = state(20);
+    const giz = state(30);
+
+    const sum = derived(() => {
+      recalcs++;
+      return foo.$ + bar.$ + giz.$;
+    }, [foo, bar, giz]);
+
+    const incrementFoo = action(() => (foo.$ += 1));
+    const incrementBar = action(() => (bar.$ += 1));
+
+    return {foo, bar, giz, sum, incrementFoo, incrementBar};
+  });
+
+  expect(recalcs).toEqual(1);
+
+  expect(store.getState()).toStrictEqual({
+    foo: 10,
+    bar: 20,
+    giz: 30,
+    sum: 60,
+  });
+
+  store.incrementFoo();
+
+  expect(recalcs).toEqual(2);
+
+  expect(store.getState()).toStrictEqual({
+    foo: 11,
+    bar: 20,
+    giz: 30,
+    sum: 61,
+  });
+
+  store.incrementBar();
+
+  expect(recalcs).toEqual(3);
+
+  expect(store.getState()).toStrictEqual({
+    foo: 11,
+    bar: 21,
+    giz: 30,
+    sum: 62,
+  });
+});
+
+test.skip('derived - multiple deps that change at the same time', async () => {
+  let recalcs = 0;
+  const store = createStore(() => {
+    const foo = state(10);
+    const bar = state(20);
+    const giz = state(30);
+
+    const sum = derived(() => {
+      recalcs++;
+      return foo.$ + bar.$ + giz.$;
+    }, [foo, bar, giz]);
+
+    const incrementFoo = action(() => (foo.$ += 1));
+    const incrementBarAndGiz = action(() => {
+      bar.$ += 1;
+      giz.$ += 1;
+    });
+
+    return {foo, bar, giz, sum, incrementFoo, incrementBarAndGiz};
+  });
+
+  expect(recalcs).toEqual(1);
+
+  expect(store.getState()).toStrictEqual({
+    foo: 10,
+    bar: 20,
+    giz: 30,
+    sum: 60,
+  });
+
+  store.incrementFoo();
+
+  expect(recalcs).toEqual(2);
+
+  expect(store.getState()).toStrictEqual({
+    foo: 11,
+    bar: 20,
+    giz: 30,
+    sum: 61,
+  });
+
+  store.incrementBarAndGiz();
+
+  // FAILS HERE BECAUSE OF LACK OF BATCHING
+  expect(recalcs).toEqual(3);
+
+  expect(store.getState()).toStrictEqual({
+    foo: 11,
+    bar: 21,
+    giz: 30,
+    sum: 62,
+  });
+});
+
 
 test("watchers - no deps", () => {
   let recalcs = 0;
@@ -214,6 +318,27 @@ test("watchers - empty deps", () => {
   store.increment();
 
   expect(recalcs).toEqual(1);
+});
+
+test('watchers - mutate state', () => {
+  const store = createStore(() => {
+    const count1 = state(10);
+    const count2 = state(20);
+
+    const increment = action(() => (count1.$ += 1));
+
+    watch(() => {
+      count2.$ += 5;
+    }, [count1]);
+
+    return {count1, count2, increment};
+  });
+
+  expect(store.getState()).toStrictEqual({count1: 10, count2: 25});
+
+  store.increment();
+
+  expect(store.getState()).toStrictEqual({count1: 11, count2: 30});
 });
 
 test('subscribe', async () => {
