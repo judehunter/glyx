@@ -22,6 +22,7 @@ export const createStore = <T extends Record<string, GlyxObject>>(definition: ()
     listeners.push(listener);
     return () =>
       listeners.slice(
+      listeners.splice(
         listeners.findIndex((x) => x === listener),
         1,
       );

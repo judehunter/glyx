@@ -413,6 +413,25 @@ test('subscribe', async () => {
   await expect(listenerPromise()).resolves.toStrictEqual({counter: 11});
 });
 
+test('unsubscribe', async () => {
+  const store = createStore(() => {
+    const counter = state(10);
+
+    const increment = action(() => (counter.$ += 1));
+
+    return {counter, increment};
+  });
+  const listenerPromise = () =>
+    new Promise((res, rej) => {
+      store.subscribe((state) => {
+        res(state);
+      })();
+      store.increment();
+      rej();
+    });
+  await expect(listenerPromise()).rejects.toStrictEqual(undefined);
+});
+
 test.skip('mutate state during createStore', async () => {
   const shouldThrow = () => {
     createStore(() => {
