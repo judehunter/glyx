@@ -55,15 +55,33 @@ test('action - passing arguments', () => {
 test('action.setter', () => {
   const store = createStore(() => {
     const counter = state(10);
-    const add = action.setter(counter);
-    return {counter, add};
+    const set = action.setter(counter);
+    return {counter, set};
   });
 
   expect(store.getState()).toStrictEqual({
     counter: 10,
   });
 
-  store.add((store.getState().counter as any) + 5);
+  store.set(store.getState().counter + 5);
+
+  expect(store.getState()).toStrictEqual({
+    counter: 15,
+  });
+});
+
+test('action.setter - callback fn', () => {
+  const store = createStore(() => {
+    const counter = state(10);
+    const set = action.setter(counter);
+    return {counter, set};
+  });
+
+  expect(store.getState()).toStrictEqual({
+    counter: 10,
+  });
+
+  store.set((x) => x + 5);
 
   expect(store.getState()).toStrictEqual({
     counter: 15,

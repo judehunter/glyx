@@ -17,7 +17,6 @@
     "strict": true,
     "noImplicitAny": false,
     "allowSyntheticDefaultImports": true,
-    "outDir": "./dist",
     "declaration": true
   },
   "include": [
@@ -28,6 +27,5 @@
   ],
   "exclude": [
     "node_modules",
-    "src/**/*.test.*"
   ],
 }
