@@ -6,6 +6,8 @@ export type GlyxState<T> = {$: T} & GlyxMeta<{type: 'state'; stateIdx: number}>;
 export type GlyxAction<T extends AnyFn> = T & GlyxMeta<{type: 'action'}>;
 export type GlyxObject = GlyxState<any> | GlyxAction<AnyFn>;
 
+export type Ref<T> = {current: T};
+
 export const filterObj = <T>(obj: T, cb: (val: [k: keyof T, v: T[keyof T]]) => any) => {
   return Object.fromEntries(Object.entries(obj).filter(cb as any));
 };
