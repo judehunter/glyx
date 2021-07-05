@@ -6,24 +6,24 @@ import {
   InternalStateQueue,
   SET_INTERNALS,
 } from './internals';
-import {filterObj, GlyxAction, GlyxObject, GlyxState, mapObj, __GLYX__} from './utils';
+import {AnyFn, filterObj, GlyxAction, GlyxDeclaration, GlyxState, GlyxStateGetter, mapObj, __GLYX__} from './utils';
 
 type StateFromDefinition<T extends Record<string, any>> = {
-  [P in keyof T as T[P] extends GlyxState<any> ? P : never]: T[P]['$'];
+  [P in keyof T as T[P] extends GlyxStateGetter<AnyFn> ? P : never]: ReturnType<T[P]>;
 };
 type TransformDefinition<T> = Omit<T, keyof StateFromDefinition<T>> & {
   getState(): StateFromDefinition<T>;
   subscribe: any;
 };
 
-const isState = (val: any): val is GlyxState<any> => {
+const isStateGetter = (val: any): val is GlyxStateGetter<AnyFn> => {
   return val[__GLYX__]?.type === 'state';
 };
 const isAction = (val: any): val is GlyxAction<any> => {
   return val[__GLYX__]?.type === 'action';
 };
 
-export const createStore = <T extends Record<string, GlyxObject>>(definition: () => T) => {
+export const createStore = <T extends Record<string, GlyxDeclaration>>(definition: () => T) => {
   let listeners = [] as any[];
   const subscribe = (listener: any) => {
     listeners.push(listener);
@@ -37,12 +37,10 @@ export const createStore = <T extends Record<string, GlyxObject>>(definition: ()
   const state = {current: []} as InternalState;
   const dependents = {current: []} as InternalDependents;
   const notify: {current: (obj?) => any | never} = {
-    current: () => {
-      // throw new Error('You should not modify the state during the creation of the store');
-    },
+    current: () => {},
   } as InternalNotify;
 
-  let stateQueue = [] as {stateIdx: number; val: any;}[];
+  let stateQueue = [] as {stateIdx: number; val: any}[];
 
   let skipCommitState = true;
 
@@ -52,30 +50,29 @@ export const createStore = <T extends Record<string, GlyxObject>>(definition: ()
       throw new Error('Detected a possibly infinite state change loop');
     }
 
-    const resolved = stateQueue.reduceRight(
-      (acc, cur) => {
-        if (acc.find((x) => x.state.stateIdx === cur.stateIdx)) {
-          return acc;
-        }
-        const oldValue = state.current[cur.stateIdx].$;
-        const newValue = cur.val;
-        state.current[cur.stateIdx].$ = newValue;
-        return [...acc, {oldValue, state: cur}];
-      },
-      [] as {oldValue: any, state: typeof stateQueue[number]}[],
-    );
+    const resolved = stateQueue.reduceRight((acc, cur) => {
+      if (acc.find((x) => x.state.stateIdx === cur.stateIdx)) {
+        return acc;
+      }
+      const oldValue = state.current[cur.stateIdx].val;
+      const newValue = cur.val;
+      state.current[cur.stateIdx].val = newValue;
+      return [...acc, {oldValue, state: cur}];
+    }, [] as {oldValue: any; state: typeof stateQueue[number]}[]);
 
     if (!resolved.length) return;
-    
+
     stateQueue = [];
 
     for (const d of dependents.current) {
-      let shouldRecalc = d.dependsOn === '*' || resolved.find(item => d.dependsOn.find((x) => x[__GLYX__].stateIdx === item.state.stateIdx));
-      
+      let shouldRecalc =
+        d.dependsOn === '*' ||
+        resolved.find((item) => d.dependsOn.find((x) => x[__GLYX__].stateIdx === item.state.stateIdx));
+
       if (shouldRecalc) {
         if (d.type === 'derived') {
           const v = d.cb();
-          state.current[d.stateIdx].$ = v;
+          state.current[d.stateIdx].val = v;
         } else if (d.type === 'watch') {
           d.cb();
         }
@@ -91,7 +88,7 @@ export const createStore = <T extends Record<string, GlyxObject>>(definition: ()
     current: (item) => {
       stateQueue.push(item);
       if (stateQueue.length === 1) {
-        setTimeout(commitState)
+        setTimeout(commitState);
       }
     },
   } as InternalSetState;
@@ -100,18 +97,18 @@ export const createStore = <T extends Record<string, GlyxObject>>(definition: ()
     state,
     dependents,
     notify,
-    setState
+    setState,
   });
 
   const exposed = definition() as any;
-  const exposedState = filterObj(exposed, ([, v]) => isState(v)) as Record<string, GlyxState<any>>;
+  const exposedState = filterObj(exposed, ([, v]) => isStateGetter(v)) as Record<string, GlyxState<any>>;
   const exposedActions = filterObj(exposed, ([, v]) => isAction(v)) as Record<string, GlyxAction<any>>;
 
   SET_INTERNALS(null!);
 
   const getState = () => {
     return mapObj(exposedState, ([k, v]) => {
-      return [k, state.current[v[__GLYX__].stateIdx].$];
+      return [k, state.current[v[__GLYX__].stateIdx].val];
     });
   };
 

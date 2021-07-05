@@ -7,13 +7,13 @@ const nextTick = () =>
 
 test('state and actions', async () => {
   const store = createStore(() => {
-    const counter = state(10);
-    const hungry = state(false);
+    const [counter, setCounter] = state(10);
+    const [hungry, setHungry] = state(false);
 
-    const increment = action(() => (counter.$ += 1));
-    const decrement = action(() => (counter.$ -= 1));
-    const becomeHungry = action(() => (hungry.$ = true));
-    const eat = action(() => (hungry.$ = false));
+    const increment = action(() => setCounter(counter() + 1));
+    const decrement = action(() => setCounter(counter() - 1));
+    const becomeHungry = action(() => setHungry(true));
+    const eat = action(() => setHungry(false));
     return {counter, hungry, increment, decrement, eat, becomeHungry};
   });
 
@@ -46,17 +46,17 @@ test('state and actions', async () => {
 test('batching - derived should recalc once', async () => {
   let recalcs = 0;
   const store = createStore(() => {
-    const counter1 = state(10);
-    const counter2 = state(100);
+    const [counter1, setCounter1] = state(10);
+    const [counter2, setCounter2] = state(100);
 
     const sum = derived(() => {
       recalcs += 1;
-      return counter1.$ + counter2.$;
+      return counter1() + counter2();
     })
 
     const test = action(() => {
-      counter1.$ = 20;
-      counter2.$ = 200;
+      setCounter1(20);
+      setCounter2(200);
     });
     
     return {sum, test};
@@ -77,11 +77,11 @@ test('batching - derived should recalc once', async () => {
 
 test('batching - mutating the same variable', async () => {
   const store = createStore(() => {
-    const counter = state(10);
+    const [counter, setCounter] = state(10);
 
     const changeTwice = action(() => {
-      counter.$ = 20;
-      counter.$ = 30;
+      setCounter(20);
+      setCounter(30);
     });
     return {counter, changeTwice};
   });
@@ -97,8 +97,8 @@ test('batching - mutating the same variable', async () => {
 
 test('action - passing arguments', async () => {
   const store = createStore(() => {
-    const counter = state(10);
-    const add = action((val) => (counter.$ += val));
+    const [counter, setCounter] = state(10);
+    const add = action((val) => setCounter(counter() + val));
     return {counter, add};
   });
 
@@ -115,55 +115,55 @@ test('action - passing arguments', async () => {
   });
 });
 
-test('action.setter', async () => {
-  const store = createStore(() => {
-    const counter = state(10);
-    const set = action.setter(counter);
-    return {counter, set};
-  });
+// test('action.setter', async () => {
+//   const store = createStore(() => {
+//     const counter = state(10);
+//     const set = action.setter(counter);
+//     return {counter, set};
+//   });
 
-  expect(store.getState()).toStrictEqual({
-    counter: 10,
-  });
+//   expect(store.getState()).toStrictEqual({
+//     counter: 10,
+//   });
 
-  store.set(store.getState().counter + 5);
+//   store.set(store.getState().counter + 5);
 
-  await nextTick();
+//   await nextTick();
 
-  expect(store.getState()).toStrictEqual({
-    counter: 15,
-  });
-});
+//   expect(store.getState()).toStrictEqual({
+//     counter: 15,
+//   });
+// });
 
-test('action.setter - callback fn', async () => {
-  const store = createStore(() => {
-    const counter = state(10);
-    const set = action.setter(counter);
-    return {counter, set};
-  });
+// test('action.setter - callback fn', async () => {
+//   const store = createStore(() => {
+//     const counter = state(10);
+//     const set = action.setter(counter);
+//     return {counter, set};
+//   });
 
-  expect(store.getState()).toStrictEqual({
-    counter: 10,
-  });
+//   expect(store.getState()).toStrictEqual({
+//     counter: 10,
+//   });
 
-  store.set((x) => x + 5);
+//   store.set((x) => x + 5);
 
-  await nextTick();
+//   await nextTick();
 
-  expect(store.getState()).toStrictEqual({
-    counter: 15,
-  });
-});
+//   expect(store.getState()).toStrictEqual({
+//     counter: 15,
+//   });
+// });
 
 test('two independent stores', async () => {
   const store1 = createStore(() => {
-    const val = state(0);
-    const increment = action(() => (val.$ += 1));
+    const [val, setVal] = state(0);
+    const increment = action(() => setVal(val() + 1));
     return {val, increment};
   });
   const store2 = createStore(() => {
-    const val = state(10);
-    const decrement = action(() => (val.$ -= 1));
+    const [val, setVal] = state(10);
+    const decrement = action(() => setVal(val() - 1));
     return {val, decrement};
   });
 
@@ -189,10 +189,10 @@ test('two independent stores', async () => {
 
 test('derived - no deps', async () => {
   const store = createStore(() => {
-    const counter = state(10);
-    const doubleCounter = derived(() => counter.$ * 2);
+    const [counter, setCounter] = state(10);
+    const doubleCounter = derived(() => counter() * 2);
 
-    const increment = action(() => (counter.$ += 1));
+    const increment = action(() => setCounter(counter() + 1));
 
     return {counter, doubleCounter, increment};
   });
@@ -215,15 +215,15 @@ test('derived - no deps', async () => {
 test('derived - deps', async () => {
   let recalcs = 0;
   const store = createStore(() => {
-    const counter = state(10);
+    const [counter, setCounter] = state(10);
     // const hungry = state(true);
 
     const expensive = derived(() => {
       recalcs++;
-      return counter.$ * 2;
+      return counter() * 2;
     }, [counter]);
 
-    const increment = action(() => (counter.$ += 1));
+    const increment = action(() => setCounter(counter() + 1));
 
     return {counter, expensive, increment};
   });
@@ -250,14 +250,14 @@ test('derived - deps', async () => {
 test('derived - empty deps', async () => {
   let recalcs = 0;
   const store = createStore(() => {
-    const counter = state(10);
+    const [counter, setCounter] = state(10);
 
     const expensive = derived(() => {
       recalcs++;
-      return counter.$ * 2;
+      return counter() * 2;
     }, []);
 
-    const increment = action(() => (counter.$ += 1));
+    const increment = action(() => setCounter(counter() + 1));
 
     return {counter, expensive, increment};
   });
@@ -284,17 +284,17 @@ test('derived - empty deps', async () => {
 test('derived - multiple deps', async () => {
   let recalcs = 0;
   const store = createStore(() => {
-    const foo = state(10);
-    const bar = state(20);
-    const giz = state(30);
+    const [foo, setFoo] = state(10);
+    const [bar, setBar] = state(20);
+    const [giz, setGiz] = state(30);
 
     const sum = derived(() => {
       recalcs++;
-      return foo.$ + bar.$ + giz.$;
+      return foo() + bar() + giz();
     }, [foo, bar, giz]);
 
-    const incrementFoo = action(() => (foo.$ += 1));
-    const incrementBar = action(() => (bar.$ += 1));
+    const incrementFoo = action(() => setFoo(foo() + 1));
+    const incrementBar = action(() => setBar(bar() + 1));
 
     return {foo, bar, giz, sum, incrementFoo, incrementBar};
   });
@@ -338,19 +338,19 @@ test('derived - multiple deps', async () => {
 test('derived - multiple deps that change at the same time', async () => {
   let recalcs = 0;
   const store = createStore(() => {
-    const foo = state(10);
-    const bar = state(20);
-    const giz = state(30);
+    const [foo, setFoo] = state(10);
+    const [bar, setBar] = state(20);
+    const [giz, setGiz] = state(30);
 
     const sum = derived(() => {
       recalcs++;
-      return foo.$ + bar.$ + giz.$;
+      return foo() + bar() + giz();
     }, [foo, bar, giz]);
 
-    const incrementFoo = action(() => (foo.$ += 1));
+    const incrementFoo = action(() => setFoo(foo() + 1));
     const incrementBarAndGiz = action(() => {
-      bar.$ += 1;
-      giz.$ += 1;
+      setBar(bar() + 1);
+      setGiz(giz() + 1);
     });
 
     return {foo, bar, giz, sum, incrementFoo, incrementBarAndGiz};
@@ -396,38 +396,38 @@ test('derived - multiple deps that change at the same time', async () => {
 test('watchers - no deps', async () => {
   let recalcs = 0;
   const store = createStore(() => {
-    const counter = state(10);
+    const [counter, setCounter] = state(10);
 
     watch(() => {
       recalcs++;
     });
 
-    const increment = action(() => (counter.$ += 1));
+    const increment = action(() => setCounter(counter() + 1));
 
     return {counter, increment};
   });
 
-  expect(recalcs).toEqual(1);
+  expect(recalcs).toEqual(0);
 
   store.increment();
 
   await nextTick();
 
-  expect(recalcs).toEqual(2);
+  expect(recalcs).toEqual(1);
 });
 
 test('watchers - deps', async () => {
   let recalcs = 0;
   const store = createStore(() => {
-    const counter = state(10);
-    const hungry = state(true);
+    const [counter, setCounter] = state(10);
+    const [hungry, setHungry] = state(true);
 
     watch(() => {
       recalcs++;
     }, [counter]);
 
-    const increment = action(() => (counter.$ += 1));
-    const eat = action(() => (hungry.$ = false));
+    const increment = action(() => setCounter(counter() + 1));
+    const eat = action(() => setHungry(false));
 
     return {counter, increment, eat};
   });
@@ -445,13 +445,13 @@ test('watchers - deps', async () => {
 test('watchers - empty deps', async () => {
   let recalcs = 0;
   const store = createStore(() => {
-    const counter = state(10);
+    const [counter, setCounter] = state(10);
 
     watch(() => {
       recalcs++;
     }, []);
 
-    const increment = action(() => (counter.$ += 1));
+    const increment = action(() => setCounter(counter() + 1));
 
     return {counter, increment};
   });
@@ -467,13 +467,13 @@ test('watchers - empty deps', async () => {
 
 test('watchers - mutate state', async () => {
   const store = createStore(() => {
-    const count1 = state(10);
-    const count2 = state(20);
+    const [count1, setCount1] = state(10);
+    const [count2, setCount2] = state(20);
 
-    const increment = action(() => (count1.$ += 1));
+    const increment = action(() => setCount1(count1() + 1));
 
     watch(() => {
-      count2.$ += 5;
+      setCount2(count2() + 5);
     }, [count1]);
 
     return {count1, count2, increment};
@@ -490,9 +490,9 @@ test('watchers - mutate state', async () => {
 
 test('subscribe', async () => {
   const store = createStore(() => {
-    const counter = state(10);
+    const [counter, setCounter] = state(10);
 
-    const increment = action(() => (counter.$ += 1));
+    const increment = action(() => setCounter(counter() + 1));
 
     return {counter, increment};
   });
@@ -508,9 +508,9 @@ test('subscribe', async () => {
 
 test('unsubscribe', async () => {
   const store = createStore(() => {
-    const counter = state(10);
+    const [counter, setCounter] = state(10);
 
-    const increment = action(() => (counter.$ += 1));
+    const increment = action(() => setCounter(counter() + 1));
 
     return {counter, increment};
   });
@@ -527,9 +527,9 @@ test('unsubscribe', async () => {
 
 test('mutate state during createStore', async () => {
   const store = createStore(() => {
-    const counter = state(10);
+    const [counter, setCounter] = state(10);
 
-    const increment = action(() => (counter.$ += 1));
+    const increment = action(() => setCounter(counter() + 1));
     increment();
 
     return {counter, increment};
@@ -542,45 +542,48 @@ test('mutate state during createStore', async () => {
 
 test('cause an infinite loop', async () => {
   const shouldThrow = () => {
-    const store = createStore(() => {
-      const counter = state(10);
+    createStore(() => {
+      const [counter, setCounter] = state(10);
 
-      counter.$ += 1;
+      watch(() => {
+        setCounter(10);
+      }, [counter]);
+      setCounter(counter() + 1);
 
       return {counter};
     });
-  }
+  };
   expect(shouldThrow).toThrow();
-})
+});
 
-test.only('store previous state', async () => {
-  const store = createStore(() => {
-    const counter = state(10);
-    let counterFrozen: number | undefined = undefined;
-    const prevCounter = state<number | undefined>(undefined);
+// test.only('store previous state', async () => {
+//   const store = createStore(() => {
+//     const counter = state(10);
+//     let counterFrozen: number | undefined = undefined;
+//     const prevCounter = state<number | undefined>(undefined);
 
-    watch(() => {
-      console.log('watch', counter.$)
-      prevCounter.$ = counterFrozen;
-      counterFrozen = counter.$;
-    }, [counter]);
+//     watch(() => {
+//       console.log('watch', counter.$)
+//       prevCounter.$ = counterFrozen;
+//       counterFrozen = counter.$;
+//     }, [counter]);
 
-    const increment = action(() => (counter.$ += 1));
+//     const increment = action(() => (counter.$ += 1));
 
-    return {counter, prevCounter, increment};
-  });
+//     return {counter, prevCounter, increment};
+//   });
 
-  expect(store.getState()).toStrictEqual({
-    counter: 10,
-    prevCounter: undefined
-  })
+//   expect(store.getState()).toStrictEqual({
+//     counter: 10,
+//     prevCounter: undefined
+//   })
 
-  store.increment();
+//   store.increment();
 
-  await nextTick();
+//   await nextTick();
 
-  expect(store.getState()).toStrictEqual({
-    counter: 11,
-    prevCounter: 10,
-  });
-})
+//   expect(store.getState()).toStrictEqual({
+//     counter: 11,
+//     prevCounter: 10,
+//   });
+// })
