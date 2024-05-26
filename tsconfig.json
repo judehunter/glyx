@@ -1,16 +1,10 @@
 {
   "compilerOptions": {
-    "target": "es2018",
-    "lib": [
-      "es2019",
-      "es5",
-      "es6",
-      "dom",
-      "dom.iterable"
-    ],
+    "target": "ES2021",
+    "lib": ["es2019", "es5", "es6", "dom", "dom.iterable"],
     "allowJs": true,
     "esModuleInterop": true,
-    "module": "CommonJS",
+    "module": "ESNext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "downlevelIteration": true,
@@ -19,13 +13,6 @@
     "allowSyntheticDefaultImports": true,
     "declaration": true
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/**/*.js",
-    "src/**/*.jsx",
-  ],
-  "exclude": [
-    "node_modules",
-  ],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.js", "src/**/*.jsx"],
+  "exclude": ["node_modules"]
 }

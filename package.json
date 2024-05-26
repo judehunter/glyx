@@ -1,8 +1,9 @@
 {
   "name": "glyx",
+  "type": "module",
   "version": "0.4.0",
   "repository": "https://github.com/judehunter/glyx",
-  "author": "judehunter <matisowagm@gmail.com>",
+  "author": "judehunter <jude@judehunter.dev>",
   "license": "MIT",
   "keywords": [
     "state manager",
@@ -14,7 +15,7 @@
     "declarative"
   ],
   "scripts": {
-    "test": "jest",
+    "test": "vitest",
     "build": "tsc --project tsconfig.build.json"
   },
   "sideEffects": false,
@@ -24,37 +25,22 @@
     "node": "^12.0.0 || ^14.0.0 || >=16.0.0"
   },
   "devDependencies": {
-    "@types/jest": "^26.0.23",
-    "@types/node": "^15.12.2",
-    "jest": "^27.0.4",
-    "ts-jest": "^27.0.3",
-    "typescript": "^4.3.2"
-  },
-  "jest": {
-    "preset": "ts-jest/presets/default-esm",
-    "globals": {
-      "ts-jest": {
-        "useESM": true
-      }
-    },
-    "testEnvironment": "jsdom",
-    "coverageThreshold": {
-      "global": {
-        "statements": 100
-      }
-    },
-    "testPathIgnorePatterns": [
-      "/node_modules/",
-      "/dist/"
-    ]
+    "@types/node": "^20.12.12",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11",
+    "vitest": "^1.6.0"
   },
   "prettier": {
     "arrowParens": "always",
-    "quoteProps": "consistent",
     "semi": true,
     "singleQuote": true,
-    "trailingComma": "all",
-    "printWidth": 120,
-    "bracketSpacing": false
+    "trailingComma": "all"
+  },
+  "packageManager": "pnpm@8.15.5+sha1.a58c038faac410c947dbdb93eb30994037d0fce2",
+  "dependencies": {
+    "nanostores": "^0.10.3",
+    "radash": "^12.1.0",
+    "remeda": "^1.61.0",
+    "zustand": "^4.5.2"
   }
 }
