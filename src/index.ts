@@ -1,27 +1,22 @@
-import * as ns from 'nanostores';
-import { mapEntries } from 'radash';
 import { createStore } from 'zustand/vanilla';
 import {
   Atom,
   AtomFn,
   NotFunction,
   Action,
-  WithDefinition,
-  ValueAtomDefinition,
-  DerivedAtomDefinition,
+  ValueAtom,
+  DerivedAtom,
+  GetDefinition,
 } from './types';
-
-const atomStubs = {
-  get: () => {
-    throw new Error("Atom's get method called illegally");
-  },
-  set: () => {
-    throw new Error("Atom's set method called illegally");
-  },
-  use: () => {
-    throw new Error("Atom's use method called illegally");
-  },
-};
+import { useStore } from 'zustand';
+import {
+  atomStubs,
+  dependenciesToDependants,
+  getDefinition,
+  getTransitiveDependants,
+  isDerivedAtom,
+  isValueAtom,
+} from './utils';
 
 const stubAtomMethods = (atom: Atom) => {
   atom.get = atomStubs.get;
@@ -49,7 +44,7 @@ export const atom: AtomFn = <T>(
             type: 'valueAtom',
             initial: args[0],
           },
-  };
+  } as any;
 };
 
 const destubAtomMethods = (
@@ -78,27 +73,52 @@ const destubAtomMethods = (
 export const store = <TReturned extends Record<string, Atom | Action>>(
   definition: () => TReturned,
 ) => {
+  type TAtoms = {
+    [K in keyof TReturned as GetDefinition<TReturned[K]> extends {
+      type: 'valueAtom' | 'derivedAtom';
+    }
+      ? K
+      : never]: TReturned[K];
+  };
+
+  type TAtomMethods = {
+    [K in keyof TReturned as GetDefinition<TReturned[K]> extends {
+      type: 'valueAtom' | 'derivedAtom';
+    }
+      ? K
+      : never]: TReturned[K];
+  };
+
+  type TActions = {
+    [K in keyof TReturned as GetDefinition<TReturned[K]> extends {
+      type: 'valueAtom' | 'derivedAtom';
+    }
+      ? never
+      : K]: TReturned[K];
+  };
+
   const returned = definition();
 
-  const typedEntries = Object.entries(
-    returned as any as Record<string, WithDefinition<{}> | Action>,
-  );
+  const entries = Object.entries(returned);
 
-  const definitionEntries = typedEntries.filter(
-    (entry): entry is [string, WithDefinition<Atom>] => '__glyx' in entry[1],
+  const definitionEntries = entries.filter(
+    (entry): entry is [string, Atom] => '__glyx' in entry[1],
   );
 
   const valueAtomEntries = definitionEntries.filter(
-    (entry): entry is [string, WithDefinition<Atom, ValueAtomDefinition>] =>
-      entry[1].__glyx.type === 'valueAtom',
+    (entry): entry is [string, ValueAtom] => isValueAtom(entry[1]),
   );
   const valueAtoms = Object.fromEntries(valueAtomEntries);
 
   const derivedAtomEntries = definitionEntries.filter(
-    (entry): entry is [string, WithDefinition<Atom, DerivedAtomDefinition>] =>
-      entry[1].__glyx.type === 'derivedAtom',
+    (entry): entry is [string, DerivedAtom] => isDerivedAtom(entry[1]),
   );
   const derivedAtoms = Object.fromEntries(derivedAtomEntries);
+
+  const actionEntries = entries.filter(
+    (entry): entry is [string, Action] => entry[1] instanceof Function,
+  );
+  const actions = Object.fromEntries(actionEntries);
 
   const runAtoms = () => {
     const state: Record<string, any> = {};
@@ -108,17 +128,18 @@ export const store = <TReturned extends Record<string, Atom | Action>>(
     const atoms = [...valueAtomEntries, ...derivedAtomEntries];
 
     for (const [key, value] of valueAtomEntries) {
-      state[key] = value.__glyx.initial;
+      state[key] = getDefinition(value).initial;
     }
 
     let callee: string | null;
     for (const [name, atom] of atoms) {
       const get = () => {
-        if (name in state || atom.__glyx.type === 'valueAtom') {
+        if (name in state || isValueAtom(atom)) {
           return state[name];
         }
+        // possible bug:
         callee = name;
-        const value = atom.__glyx.get();
+        const value = getDefinition(atom).get();
         state[name] = value;
         return value;
       };
@@ -136,11 +157,11 @@ export const store = <TReturned extends Record<string, Atom | Action>>(
           }
         }
 
-        if (name in state || atom.__glyx.type === 'valueAtom') {
+        if (name in state || isValueAtom(atom)) {
           return state[name];
         }
         callee = name;
-        const value = atom.__glyx.get();
+        const value = getDefinition(atom).get();
         state[name] = value;
         return value;
       };
@@ -161,23 +182,64 @@ export const store = <TReturned extends Record<string, Atom | Action>>(
   };
 
   const { state, dependencies } = runAtoms();
-
   const zustandStore = createStore(() => state);
 
-  // const valueAtomsState = mapEntries(valueAtoms, (key, value) => [
-  //   key,
-  //   value.__glyx.initial,
-  // ]);
-  // zustandStore.setState(valueAtomsState);
+  // const atomMethods =
 
-  // const currentState = zustandStore.getState();
+  const dependants = dependenciesToDependants(dependencies);
 
-  // const derivedAtomsState = mapEntries(derivedAtoms, (key, value) => [
-  //   key,
-  //   value.__glyx.get(),
-  // ]);
+  const setAtom = (name: string, value: any) => {
+    const transitiveDependants = getTransitiveDependants(dependants, name);
+
+    const transitiveDependantEntries: [string, DerivedAtom][] =
+      transitiveDependants.map((key) => [key, derivedAtoms[key]]);
+
+    const allState = zustandStore.getState();
+
+    const state: Record<string, any> = {};
+    state[name] = value;
+
+    for (const [name, atom] of [...valueAtomEntries, ...derivedAtomEntries]) {
+      const get = () => {
+        return name in state ? state[name] : allState[name];
+      };
+      destubAtomMethods(atom, {
+        get,
+        use: get,
+      });
+    }
+
+    for (const [name, atom] of transitiveDependantEntries) {
+      state[name] = getDefinition(atom).get();
+    }
+
+    zustandStore.setState(state);
+
+    prepareAtomsForUse();
+  };
+
+  const prepareAtomsForUse = () => {
+    for (const [name, atom] of [...valueAtomEntries, ...derivedAtomEntries]) {
+      const allState = zustandStore.getState();
+      const get = () => {
+        return allState[name];
+      };
+      destubAtomMethods(atom, {
+        get,
+        use: () => useStore(zustandStore, (s) => s[name]),
+        set: (value) => setAtom(name, value),
+      });
+    }
+  };
+
+  prepareAtomsForUse();
 
   return {
     get: () => zustandStore.getState(),
+    use: () => {
+      return useStore(zustandStore) as any as TAtoms;
+    },
+    ...(actions as TActions),
+    ...({ ...valueAtoms, ...derivedAtoms } as TAtoms),
   };
 };
