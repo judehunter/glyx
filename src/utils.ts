@@ -1,4 +1,12 @@
-import { Atom, DerivedAtom, GetDefinition, ValueAtom } from './types';
+import {
+  Action,
+  Atom,
+  AtomMethods,
+  DerivedAtom,
+  GetDefinition,
+  NestedStore,
+  ValueAtom,
+} from './types';
 
 export const atomStubs = {
   get: () => {
@@ -20,7 +28,17 @@ export const isDerivedAtom = <T>(atom: Atom<T>): atom is DerivedAtom<T> => {
   return getDefinition(atom).type === 'derivedAtom';
 };
 
-export const getDefinition = <T extends Atom>(atom: T): GetDefinition<T> =>
+export const isAction = (value: any): value is Action => {
+  return value instanceof Function;
+};
+
+export const isNestedStore = <T>(
+  store: AtomMethods<T>,
+): store is NestedStore<T> => {
+  return (getDefinition as any)(store).type === '';
+};
+
+export const getDefinition = <T>(atom: T): GetDefinition<T> =>
   (atom as any)['__glyx'];
 
 /**
@@ -71,4 +89,33 @@ export const adjacencyListToClosureTable = (
     }
   }
   return closureTable;
+};
+
+export const stubAtomMethods = (atom: Atom) => {
+  atom.get = atomStubs.get;
+  atom.set = atomStubs.set;
+  atom.use = atomStubs.use;
+};
+
+export const destubAtomMethods = (
+  atom: Atom,
+  {
+    get,
+    set,
+    use,
+  }: {
+    get?: () => any;
+    set?: (value: any) => void;
+    use?: () => any;
+  },
+) => {
+  if (get) {
+    atom.get = get;
+  }
+  if (set) {
+    atom.set = set;
+  }
+  if (use) {
+    atom.use = use;
+  }
 };

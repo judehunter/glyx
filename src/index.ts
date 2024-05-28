@@ -12,17 +12,13 @@ import { useStore } from 'zustand';
 import {
   atomStubs,
   dependenciesToDependants,
+  destubAtomMethods,
   getDefinition,
   getTransitiveDependants,
   isDerivedAtom,
   isValueAtom,
+  stubAtomMethods,
 } from './utils';
-
-const stubAtomMethods = (atom: Atom) => {
-  atom.get = atomStubs.get;
-  atom.set = atomStubs.set;
-  atom.use = atomStubs.use;
-};
 
 export const atom: AtomFn = <T>(
   ...args: [
@@ -47,59 +43,35 @@ export const atom: AtomFn = <T>(
   } as any;
 };
 
-const destubAtomMethods = (
-  atom: Atom,
-  {
-    get,
-    set,
-    use,
-  }: {
-    get?: () => any;
-    set?: (value: any) => void;
-    use?: () => any;
-  },
-) => {
-  if (get) {
-    atom.get = get;
-  }
-  if (set) {
-    atom.set = set;
-  }
-  if (use) {
-    atom.use = use;
-  }
-};
-
-export const store = <TReturned extends Record<string, Atom | Action>>(
-  definition: () => TReturned,
-) => {
-  type TAtoms = {
-    [K in keyof TReturned as GetDefinition<TReturned[K]> extends {
+type ParseStoreDefinition<T extends Record<string, Atom | Action>> = {
+  TAtoms: {
+    [K in keyof T as GetDefinition<T[K]> extends {
       type: 'valueAtom' | 'derivedAtom';
     }
       ? K
-      : never]: TReturned[K];
+      : never]: T[K];
   };
-
-  type TAtomMethods = {
-    [K in keyof TReturned as GetDefinition<TReturned[K]> extends {
-      type: 'valueAtom' | 'derivedAtom';
-    }
-      ? K
-      : never]: TReturned[K];
-  };
-
-  type TActions = {
-    [K in keyof TReturned as GetDefinition<TReturned[K]> extends {
+  // TAtomMethods: {
+  //   [K in keyof T as GetDefinition<T[K]> extends {
+  //     type: 'valueAtom' | 'derivedAtom';
+  //   }
+  //     ? K
+  //     : never]: T[K];
+  // };
+  TActions: {
+    [K in keyof T as GetDefinition<T[K]> extends {
       type: 'valueAtom' | 'derivedAtom';
     }
       ? never
-      : K]: TReturned[K];
+      : K]: T[K];
   };
+};
 
-  const returned = definition();
-
-  const entries = Object.entries(returned);
+const parseStoreDefinition = <T extends Record<string, Atom | Action>>(
+  storeDefinition: T,
+  path: any[] = [],
+) => {
+  const entries = Object.entries(storeDefinition);
 
   const definitionEntries = entries.filter(
     (entry): entry is [string, Atom] => '__glyx' in entry[1],
@@ -120,7 +92,33 @@ export const store = <TReturned extends Record<string, Atom | Action>>(
   );
   const actions = Object.fromEntries(actionEntries);
 
-  const runAtoms = () => {
+  return {
+    valueAtomEntries,
+    valueAtoms,
+    derivedAtomEntries,
+    derivedAtoms,
+    actions,
+  };
+};
+
+export const store = <TStoreDefinition extends Record<string, Atom | Action>>(
+  definition: () => TStoreDefinition,
+) => {
+  type TParsedStoreDefinition = ParseStoreDefinition<TStoreDefinition>;
+  type TAtoms = TParsedStoreDefinition['TAtoms'];
+  type TActions = TParsedStoreDefinition['TActions'];
+
+  const storeDefinition = definition();
+
+  const {
+    valueAtomEntries,
+    valueAtoms,
+    derivedAtomEntries,
+    derivedAtoms,
+    actions,
+  } = parseStoreDefinition(storeDefinition);
+
+  const firstRun = () => {
     const state: Record<string, any> = {};
 
     const adjacencyList: Record<string, string[]> = {};
@@ -181,10 +179,8 @@ export const store = <TReturned extends Record<string, Atom | Action>>(
     return { state, dependencies: adjacencyList };
   };
 
-  const { state, dependencies } = runAtoms();
+  const { state, dependencies } = firstRun();
   const zustandStore = createStore(() => state);
-
-  // const atomMethods =
 
   const dependants = dependenciesToDependants(dependencies);
 
@@ -218,6 +214,14 @@ export const store = <TReturned extends Record<string, Atom | Action>>(
     prepareAtomsForUse();
   };
 
+  const setDerivedAtom = (atom: DerivedAtom, value: any) => {
+    const setter = getDefinition(atom).set;
+    if (!setter) {
+      throw new Error('Derived atom is read-only');
+    }
+    setter(value);
+  };
+
   const prepareAtomsForUse = () => {
     for (const [name, atom] of [...valueAtomEntries, ...derivedAtomEntries]) {
       const allState = zustandStore.getState();
@@ -227,7 +231,9 @@ export const store = <TReturned extends Record<string, Atom | Action>>(
       destubAtomMethods(atom, {
         get,
         use: () => useStore(zustandStore, (s) => s[name]),
-        set: (value) => setAtom(name, value),
+        set: isDerivedAtom(atom)
+          ? (value) => setDerivedAtom(atom, value)
+          : (value) => setAtom(name, value),
       });
     }
   };

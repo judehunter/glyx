@@ -2,7 +2,7 @@
 
 The declarative state management library.
 
-````ts
+```ts
 const canvas = store(() => {
   const nodes = atom([]);
   const edges = atom([]);
@@ -58,4 +58,4 @@ canvas.nodeById(123).width.use();
 canvas.nodeById(123).width.set(100);
 
 canvas.deleteNode(123);
-````
+```

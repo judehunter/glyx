@@ -145,3 +145,28 @@ test('store.atom.use()', () => {
   expect(spy3).toHaveBeenCalledTimes(1);
   expect(spy3.mock.lastCall).toEqual([10]);
 });
+
+test('set derived atom', () => {
+  const s = store(() => {
+    const counter = atom(5);
+    const doubled = atom(
+      () => counter.use() * 2,
+      (val) => counter.set(val / 2),
+    );
+    const quadrupled = atom(
+      () => doubled.use() * 2,
+      (val) => doubled.set(val / 2),
+    );
+    return { counter, doubled, quadrupled };
+  });
+
+  expect(s.get()).toEqual({ counter: 5, doubled: 10, quadrupled: 20 });
+
+  s.doubled.set(20);
+
+  expect(s.get()).toEqual({ counter: 10, doubled: 20, quadrupled: 40 });
+
+  s.quadrupled.set(80);
+
+  expect(s.get()).toEqual({ counter: 20, doubled: 40, quadrupled: 80 });
+});
