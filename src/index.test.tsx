@@ -1,15 +1,20 @@
-import { expect, test, vi } from 'vitest';
-import { atom, store } from '.';
+import { beforeAll, expect, test, vi } from 'vitest';
+import { atom, store as _store, nested } from '.';
 import { act, render, renderHook } from '@testing-library/react';
 import React from 'react';
+import { revealTestInternals } from './utils';
+import { Action, Atom, Internal, NestedStoreLocatorArgs } from './types';
+
+const store = <TStoreDefinition extends Record<string, Atom | Action>>(
+  args: () => TStoreDefinition,
+) => revealTestInternals(_store(args));
 
 test('basic store with atoms', () => {
-  const s = store(() => {
+  const s = _store(() => {
     const counter = atom(0);
     const foo = atom('abc');
     return { counter, foo };
   });
-
   expect(s.get()).toEqual({ counter: 0, foo: 'abc' });
 });
 
@@ -69,7 +74,36 @@ test('only atoms returned from store.use()', () => {
   });
 });
 
-test('store.use(), .set(), derived atoms', () => {
+test('lazy derived atoms', () => {
+  const s = store(() => {
+    const counter = atom(5);
+    const increment = () => counter.set(counter.get() + 1);
+    const doubled = atom(() => counter.use() * 2);
+    return { counter, doubled, increment };
+  });
+
+  expect(s.__glyx_test.get()).toEqual({ counter: 5 });
+  s.increment();
+  expect(s.__glyx_test.get()).toEqual({ counter: 6 });
+  expect(s.get()).toEqual({ counter: 6, doubled: 12 });
+  s.increment();
+  expect(s.get()).toEqual({ counter: 7, doubled: 14 });
+});
+
+test('get and use - atom dependency', () => {
+  const s = store(() => {
+    const a = atom(5);
+    const b = atom(() => a.use() * 2);
+    const c = atom(() => b.get() * 2);
+    const d = atom(() => c.use() * 2);
+    return { a, b, c, d };
+  });
+
+  expect(s.get()).toEqual({ a: 5, b: 10, c: 20, d: 40 });
+  expect(s.__glyx_test.getDependants()).toEqual({ a: ['b'], c: ['d'] });
+});
+
+test('store.use(), .set(), derived atoms', { timeout: 100 }, async () => {
   const s = store(() => {
     const counter = atom(5);
     const increment = () => counter.set(counter.get() + 1);
@@ -169,4 +203,23 @@ test('set derived atom', () => {
   s.quadrupled.set(80);
 
   expect(s.get()).toEqual({ counter: 20, doubled: 40, quadrupled: 80 });
+});
+
+test('nested store', () => {
+  const s = store(() => {
+    const a = atom([1, 2]);
+    const b = nested(
+      (idx: number) => ({
+        get: () => a.use()[idx],
+        set: (val) => a.set(a.use().map((v, i) => (i === idx ? val : v))),
+      }),
+      (ab) => {
+        const c = atom(() => ab.use() * 2);
+        return { c };
+      },
+    );
+    return { a, b };
+  });
+
+  expect(s.__glyx_test.get()).toEqual({ a: [1, 2], b: new WeakMap() });
 });

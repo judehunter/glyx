@@ -4,8 +4,11 @@ import {
   AtomMethods,
   DerivedAtom,
   GetDefinition,
+  Internal,
+  InternalTest,
   NestedStore,
   ValueAtom,
+  WithInternalsTest,
 } from './types';
 
 export const atomStubs = {
@@ -20,12 +23,16 @@ export const atomStubs = {
   },
 };
 
-export const isValueAtom = <T>(atom: Atom<T>): atom is ValueAtom<T> => {
-  return getDefinition(atom).type === 'valueAtom';
+export const isValueAtom = <T>(
+  atom: Internal<Atom<T>>,
+): atom is Internal<ValueAtom<T>> => {
+  return atom.__glyx.type === 'valueAtom';
 };
 
-export const isDerivedAtom = <T>(atom: Atom<T>): atom is DerivedAtom<T> => {
-  return getDefinition(atom).type === 'derivedAtom';
+export const isDerivedAtom = <T>(
+  atom: Internal<Atom<T>>,
+): atom is Internal<DerivedAtom<T>> => {
+  return atom.__glyx.type === 'derivedAtom';
 };
 
 export const isAction = (value: any): value is Action => {
@@ -35,11 +42,24 @@ export const isAction = (value: any): value is Action => {
 export const isNestedStore = <T>(
   store: AtomMethods<T>,
 ): store is NestedStore<T> => {
-  return (getDefinition as any)(store).type === '';
+  return (store as any).__glyx.type === 'nestedStore';
 };
 
-export const getDefinition = <T>(atom: T): GetDefinition<T> =>
-  (atom as any)['__glyx'];
+export const revealInternals = <T>(atom: T) => atom as Internal<T>;
+
+const __glyx_test =
+  process.env.NODE_ENV === 'test'
+    ? {
+        test: 123,
+      }
+    : undefined;
+
+const test = {
+  abc: 456,
+  ...__glyx_test,
+};
+
+export const revealTestInternals = <T>(val: T) => val as InternalTest<T>;
 
 /**
  * Reverses the adjacency list of dependencies to dependants.
@@ -91,6 +111,24 @@ export const adjacencyListToClosureTable = (
   return closureTable;
 };
 
+export const mergeDependants = (
+  a: Record<string, string[]>,
+  b: Record<string, string[]>,
+) => {
+  const result = { ...a };
+  for (const [key, value] of Object.entries(b)) {
+    if (!result[key]) {
+      result[key] = [];
+    }
+    for (const v of value) {
+      if (!result[key].includes(v)) {
+        result[key].push(v);
+      }
+    }
+  }
+  return result;
+};
+
 export const stubAtomMethods = (atom: Atom) => {
   atom.get = atomStubs.get;
   atom.set = atomStubs.set;
@@ -118,4 +156,14 @@ export const destubAtomMethods = (
   if (use) {
     atom.use = use;
   }
+};
+
+export const ass = <T, TAs>(self: T, cb: (self: T) => TAs) =>
+  self as any as TAs;
+
+export const withInternalsTest = <TA, TB>(
+  x: TA,
+  __glyx_test: TB,
+): WithInternalsTest<TA, TB> => {
+  return { ...x, __glyx_test } as any;
 };

@@ -3,6 +3,7 @@ import {
   adjacencyListToClosureTable,
   dependenciesToDependants,
   getTransitiveDependants,
+  mergeDependants,
 } from './utils';
 
 test('dependencies to dependants', () => {
@@ -60,4 +61,21 @@ test('transitive dependants', () => {
   expect(getTransitiveDependants(dependants, 'd').sort()).toEqual(['e']);
 
   expect(getTransitiveDependants(dependants, 'e').sort()).toEqual([]);
+});
+
+test('mergeDependants', () => {
+  const a = {
+    a: ['b'],
+    b: ['c', 'e'],
+    c: ['d', 'e'],
+  };
+  const b = {
+    b: ['c', 'd'],
+    c: ['b'],
+  };
+  expect(mergeDependants(a, b)).toEqual({
+    a: ['b'],
+    b: ['c', 'e', 'd'],
+    c: ['d', 'e', 'b'],
+  });
 });

@@ -2,16 +2,10 @@ import { atomStubs } from './utils';
 
 export type NotFunction<T> = T extends Function ? never : T;
 
-class GlyxObject<
-  TDefinition = ValueAtomDefinition<any> | DerivedAtomDefinition<any>,
-> {
-  private __glyx: TDefinition = null!;
-}
-
-export type WithDefinition<
+export type WithInternals<
   TTarget,
   TDefinition = ValueAtomDefinition<any> | DerivedAtomDefinition<any>,
-> = TTarget & InstanceType<typeof GlyxObject<TDefinition>>;
+> = TTarget & ({} | { __glyx: TDefinition });
 
 export type AtomMethods<T = any> = {
   get: () => T;
@@ -25,38 +19,50 @@ export type ValueAtomDefinition<T = any> = {
   type: 'valueAtom';
 };
 export type DerivedAtomDefinition<T = any> = {
+  isInited: boolean;
   get: () => T;
   set: ((value: T) => void) | undefined;
   type: 'derivedAtom';
 };
 export type NestedStoreDefinition<
-  T = any,
-  TGetSetArgs extends any[] = any[],
+  TValue = any,
+  TLocatorArgs extends any[] = any[],
 > = {
-  getSet: (...args: TGetSetArgs) => {
-    get: () => T;
-    set: ((value: T) => void) | undefined;
+  isInited: boolean;
+  locator: (...args: TLocatorArgs) => {
+    get: () => TValue;
+    set: ((value: NoInfer<TValue>) => void) | undefined;
   };
-  store: (atom: Atom<T>) => Record<string, Atom | Action>;
+  store: (
+    atom: NoInfer<Atom<TValue>>,
+  ) => Record<string, Atom | NestedStore | Action>;
   type: 'nestedStore';
 };
 
-export type ValueAtom<T = any> = WithDefinition<
+export type ValueAtom<T = any> = WithInternals<
   AtomMethods<T>,
   ValueAtomDefinition<T>
 >;
-export type DerivedAtom<T = any> = WithDefinition<
+export type DerivedAtom<T = any> = WithInternals<
   AtomMethods<T>,
   DerivedAtomDefinition<T>
 >;
 export type NestedStore<
   T = any,
-  TGetSetArgs extends any[] = any[],
-> = WithDefinition<
-  AtomMethods<T> & Record<string, Atom | Action>,
-  NestedStoreDefinition<T, TGetSetArgs>
+  TLocatorArgs extends any[] = any[],
+  TStore extends Record<string, Atom | NestedStore | Action> = Record<
+    string,
+    any
+  >,
+> = WithInternals<
+  AtomMethods<T> & MergeParsedStoreDefinition<ParseStoreDef<TStore>>,
+  NestedStoreDefinition<T, TLocatorArgs>
 >;
 export type Atom<T = any> = ValueAtom<T> | DerivedAtom<T>;
+
+export type Internal<T> = Extract<T, { __glyx: any }>;
+export type WithInternalsTest<T, TTest> = T & ({} | { __glyx_test: TTest });
+export type InternalTest<T> = Extract<T, { __glyx_test: any }>;
 
 export type GetDefinition<TAtom> = TAtom extends Record<string, any>
   ? TAtom['__glyx']
@@ -73,5 +79,39 @@ type DerivedAtomFn = <T>(
 
 export type AtomFn = ValueAtomFn & DerivedAtomFn;
 
+export type ParseStoreDef<
+  T extends Record<string, Atom | NestedStore | Action>,
+> = {
+  TAtoms: {
+    [K in keyof T as Internal<T[K]>['__glyx'] extends {
+      type: 'valueAtom' | 'derivedAtom';
+    }
+      ? K
+      : never]: T[K];
+  };
+  TNestedStores: {
+    [K in keyof T as Internal<T[K]>['__glyx'] extends {
+      type: 'nestedStore';
+    }
+      ? K
+      : never]: T[K];
+  };
+  TActions: {
+    [K in keyof T as Internal<T[K]>['__glyx'] extends {
+      type: 'valueAtom' | 'derivedAtom';
+    }
+      ? never
+      : K]: T[K];
+  };
+};
+
+type MergeParsedStoreDefinition<T extends Record<string, any>> = T['TAtoms'] &
+  T['TNestedStores'] &
+  T['TActions'];
+
 type CacheKey = Record<string, any>;
 type AtomPath = (string | CacheKey)[];
+
+export type NestedStoreLocatorArgs<T extends Record<string, any>> = Parameters<
+  T['__glyx']['locator']
+>;
