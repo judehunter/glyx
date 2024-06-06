@@ -23,14 +23,12 @@ export const atomStubs = {
   },
 };
 
-export const isValueAtom = <T>(
-  atom: Internal<Atom<T>>,
-): atom is Internal<ValueAtom<T>> => {
+export const isValueAtom = <T>(atom: any): atom is Internal<ValueAtom<T>> => {
   return atom.__glyx.type === 'valueAtom';
 };
 
 export const isDerivedAtom = <T>(
-  atom: Internal<Atom<T>>,
+  atom: any,
 ): atom is Internal<DerivedAtom<T>> => {
   return atom.__glyx.type === 'derivedAtom';
 };
@@ -40,12 +38,15 @@ export const isAction = (value: any): value is Action => {
 };
 
 export const isNestedStore = <T>(
-  store: AtomMethods<T>,
-): store is NestedStore<T> => {
+  store: any,
+): store is Internal<NestedStore<T>> => {
   return (store as any).__glyx.type === 'nestedStore';
 };
 
-export const revealInternals = <T>(atom: T) => atom as Internal<T>;
+export const revealInternals = <T>(val: T, path: string[]) => {
+  (val as any).__glyx.path = path;
+  return val as Internal<T>;
+};
 
 const __glyx_test =
   process.env.NODE_ENV === 'test'
@@ -129,34 +130,41 @@ export const mergeDependants = (
   return result;
 };
 
-export const stubAtomMethods = (atom: Atom) => {
-  atom.get = atomStubs.get;
-  atom.set = atomStubs.set;
-  atom.use = atomStubs.use;
-};
+// export const stubAtomMethods = (atom: Atom) => {
+//   atom.get = atomStubs.get;
+//   atom.set = atomStubs.set;
+//   atom.use = atomStubs.use;
+// };
 
-export const destubAtomMethods = (
-  atom: Atom,
-  {
-    get,
-    set,
-    use,
-  }: {
-    get?: () => any;
-    set?: (value: any) => void;
-    use?: () => any;
-  },
-) => {
-  if (get) {
-    atom.get = get;
-  }
-  if (set) {
-    atom.set = set;
-  }
-  if (use) {
-    atom.use = use;
-  }
-};
+// export const destubAtomMethods = (
+//   atom: Atom,
+//   {
+//     get,
+//     set,
+//     use,
+//   }: {
+//     get?: () => any;
+//     set?: (value: any) => void;
+//     use?: () => any;
+//   },
+// ) => {
+//   if (get) {
+//     atom.get = get;
+//   }
+//   if (set) {
+//     atom.set = set;
+//   }
+//   if (use) {
+//     atom.use = use;
+//   }
+// };
+
+// export const destubNestedStore = (
+//   nestedStore: Internal<NestedStore>,
+//   fn: (...args: any[]) => Record<string, Atom | NestedStore | Action>,
+// ) => {
+//   nestedStore.__glyx.fn = fn;
+// };
 
 export const ass = <T, TAs>(self: T, cb: (self: T) => TAs) =>
   self as any as TAs;
@@ -166,4 +174,35 @@ export const withInternalsTest = <TA, TB>(
   __glyx_test: TB,
 ): WithInternalsTest<TA, TB> => {
   return { ...x, __glyx_test } as any;
+};
+
+export const getPath = (val: Internal<Atom | NestedStore>) => {
+  if (!val.__glyx.path) {
+    throw new Error("Atom's path is undefined. This shouldn't happen.");
+  }
+  return val.__glyx.path;
+};
+
+export const setValueByPath = (
+  obj: Record<string, any>,
+  path: string[],
+  value: any,
+) => {
+  let traversed = obj;
+  const copy = [...path];
+
+  for (const [idx, fragment] of copy.entries()) {
+    if (idx === copy.length) {
+      traversed[fragment] = value;
+    } else {
+      traversed = traversed[fragment];
+    }
+  }
+  while (true) {
+    const fragment = copy[0];
+    if (copy.length === 1) {
+      traversed;
+    }
+    copy.unshift();
+  }
 };

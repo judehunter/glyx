@@ -10,7 +10,7 @@ const store = <TStoreDefinition extends Record<string, Atom | Action>>(
 ) => revealTestInternals(_store(args));
 
 test('basic store with atoms', () => {
-  const s = _store(() => {
+  const s = store(() => {
     const counter = atom(0);
     const foo = atom('abc');
     return { counter, foo };
@@ -205,6 +205,26 @@ test('set derived atom', () => {
   expect(s.get()).toEqual({ counter: 20, doubled: 40, quadrupled: 80 });
 });
 
+test.todo('paths', () => {
+  const s = store(() => {
+    const a = atom([1, 2]);
+    const a2 = atom(() => a.use().map((v) => v * 2));
+    const b = nested(
+      (idx: number) => ({
+        get: () => a.use()[idx],
+        set: (val) => a.set(a.use().map((v, i) => (i === idx ? val : v))),
+      }),
+      (ab) => {
+        const c = atom(() => ab.use() * 2);
+        return { c };
+      },
+    );
+    return { a, b };
+  });
+
+  // expect(s.a.)
+});
+
 test('nested store', () => {
   const s = store(() => {
     const a = atom([1, 2]);
@@ -221,5 +241,17 @@ test('nested store', () => {
     return { a, b };
   });
 
+  s.b(0);
+
   expect(s.__glyx_test.get()).toEqual({ a: [1, 2], b: new WeakMap() });
+});
+
+test.only('new impl', () => {
+  const s = store(() => {
+    const counter = atom(0);
+    const foo = atom('abc');
+    return { counter, foo };
+  });
+  console.log(s.__glyx_test.get());
+  // expect(s.).toEqual({ counter: 0, foo: 'abc' });
 });
