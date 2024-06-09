@@ -14,18 +14,16 @@ export type AtomMethods<T = any> = {
 };
 
 export type ValueAtomDefinition<T = any> = {
-  path: string[];
-  valueType?: T;
+  id: AtomId;
   initial: T;
   type: 'valueAtom';
 };
 export type DerivedAtomDefinition<T = any> = {
-  id: string;
-  path: string[];
+  id: AtomId;
   name?: T;
   // inited = has been calculated at least once
   isInited: boolean;
-  // tracked = dependencies ahve been captured
+  // tracked = dependencies have been captured
   isTracked: boolean;
   get: () => T;
   set: ((value: T) => void) | undefined;
@@ -36,9 +34,7 @@ export type NestedStoreDefinition<
   TLocatorArgs extends any[] = any[],
 > = {
   id: string;
-  path: string[];
   isInited: boolean;
-  // fn: (...args: TLocatorArgs) => Record<string, Atom | NestedStore | Action>;
   locator: (...args: TLocatorArgs) => {
     get: () => TValue;
     set: ((value: NoInfer<TValue>) => void) | undefined;
@@ -122,8 +118,9 @@ type MergeParsedStoreDefinition<T extends Record<string, any>> = T['TAtoms'] &
   T['TNestedStores'] &
   T['TActions'];
 
-export type AtomPath = string[];
-
 export type NestedStoreLocatorArgs<T extends Record<string, any>> = Parameters<
   T['__glyx']['locator']
 >;
+
+export type AtomId = string & { __brand: 'AtomId' };
+export type StoreId = string & { __brand: 'StoreId' };

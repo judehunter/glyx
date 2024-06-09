@@ -1,12 +1,14 @@
 import {
   Action,
   Atom,
+  AtomId,
   AtomMethods,
   DerivedAtom,
   GetDefinition,
   Internal,
   InternalTest,
   NestedStore,
+  StoreId,
   ValueAtom,
   WithInternalsTest,
 } from './types';
@@ -43,8 +45,7 @@ export const isNestedStore = <T>(
   return (store as any).__glyx.type === 'nestedStore';
 };
 
-export const revealInternals = <T>(val: T, path: string[]) => {
-  (val as any).__glyx.path = path;
+export const revealInternals = <T>(val: T) => {
   return val as Internal<T>;
 };
 
@@ -112,14 +113,14 @@ export const adjacencyListToClosureTable = (
   return closureTable;
 };
 
-export const mergeDependants = (
-  a: Record<string, string[]>,
-  b: Record<string, string[]>,
+export const mergeDependants = <T extends Record<string, string[]>>(
+  a: T,
+  b: T,
 ) => {
   const result = { ...a };
   for (const [key, value] of Object.entries(b)) {
     if (!result[key]) {
-      result[key] = [];
+      (result as any)[key] = [];
     }
     for (const v of value) {
       if (!result[key].includes(v)) {
@@ -176,13 +177,6 @@ export const withInternalsTest = <TA, TB>(
   return { ...x, __glyx_test } as any;
 };
 
-export const getPath = (val: Internal<Atom | NestedStore>) => {
-  if (!val.__glyx.path) {
-    throw new Error("Atom's path is undefined. This shouldn't happen.");
-  }
-  return val.__glyx.path;
-};
-
 export const setValueByPath = (
   obj: Record<string, any>,
   path: string[],
@@ -205,4 +199,14 @@ export const setValueByPath = (
     }
     copy.unshift();
   }
+};
+
+let lastAtomId = 0;
+export const makeAtomId = () => {
+  return ('atom-' + lastAtomId++) as AtomId;
+};
+
+let lastStoreId = 0;
+export const makeStoreId = () => {
+  return ('store-' + lastStoreId++) as StoreId;
 };

@@ -248,10 +248,12 @@ test('nested store', () => {
 
 test.only('new impl', () => {
   const s = store(() => {
-    const counter = atom(0);
-    const foo = atom('abc');
-    return { counter, foo };
+    const counter = atom(1);
+    const double = atom(() => counter.use() * 2);
+    return { counter, double };
   });
+  console.log(s.double.get());
+  console.log(s.double.get());
   console.log(s.__glyx_test.get());
   // expect(s.).toEqual({ counter: 0, foo: 'abc' });
 });
