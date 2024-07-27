@@ -1,18 +1,25 @@
-import { Atom, Internal, NestedStore } from './types';
+import {
+  Atom,
+  AtomLikeMethods,
+  Internal,
+  Select,
+  SelectAtomLike,
+} from './types';
 
 export const GLOBAL_GET = {
-  current: (atom: Internal<Atom | NestedStore>): any => {
-    if (atom.__glyx.injected) {
-      return atom.__glyx.injected.get();
+  current: (atomLike: Internal<Atom | SelectAtomLike>): any => {
+    if (atomLike.__glyx.injected) {
+      return atomLike.__glyx.injected.get();
     }
+    console.log(atomLike);
     throw new Error("Atom's get method called illegally");
   },
 };
 
 export const GLOBAL_USE = {
-  current: (atom: Internal<Atom | NestedStore>): any => {
-    if (atom.__glyx.injected) {
-      return atom.__glyx.injected.use();
+  current: (atomLike: Internal<Atom | SelectAtomLike>): any => {
+    if (atomLike.__glyx.injected) {
+      return atomLike.__glyx.injected.use();
     }
     throw new Error("Atom's use method called illegally");
   },

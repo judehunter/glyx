@@ -2,14 +2,12 @@ import {
   Action,
   Atom,
   AtomId,
-  AtomMethods,
-  DerivedAtom,
+  AtomLikeMethods,
   GetDefinition,
   Internal,
   InternalTest,
-  NestedStore,
-  StoreId,
-  ValueAtom,
+  Select,
+  SelectId,
   WithInternalsTest,
 } from './types';
 
@@ -23,26 +21,6 @@ export const atomStubs = {
   use: () => {
     throw new Error("Atom's use method called illegally");
   },
-};
-
-export const isValueAtom = <T>(atom: any): atom is Internal<ValueAtom<T>> => {
-  return atom.__glyx.type === 'valueAtom';
-};
-
-export const isDerivedAtom = <T>(
-  atom: any,
-): atom is Internal<DerivedAtom<T>> => {
-  return atom.__glyx.type === 'derivedAtom';
-};
-
-export const isAction = (value: any): value is Action => {
-  return value instanceof Function;
-};
-
-export const isNestedStore = <T>(
-  store: any,
-): store is Internal<NestedStore<T>> => {
-  return (store as any).__glyx.type === 'nestedStore';
 };
 
 export const revealInternals = <T>(val: T) => {
@@ -206,7 +184,7 @@ export const makeAtomId = () => {
   return ('atom-' + lastAtomId++) as AtomId;
 };
 
-let lastStoreId = 0;
-export const makeStoreId = () => {
-  return ('store-' + lastStoreId++) as StoreId;
+let lastSelectId = 0;
+export const makeSelectId = () => {
+  return ('select-' + lastSelectId++) as SelectId;
 };

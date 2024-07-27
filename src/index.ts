@@ -1,20 +1,16 @@
 import { createStore } from 'zustand/vanilla';
 import {
-  Atom,
-  AtomFn,
   NotFunction,
   Action,
-  ValueAtom,
-  DerivedAtom,
   GetDefinition,
-  NestedStore,
-  NestedStoreDefinition,
-  ParseStoreDef,
+  Select,
+  SelectDefinition,
   Internal,
   WithInternalsTest,
-  NestedStoreLocatorArgs,
   AtomId,
-  StoreId,
+  SelectId,
+  Atom,
+  SelectAtomLike,
 } from './types';
 // import { useStore } from 'zustand';
 import {
@@ -22,571 +18,333 @@ import {
   atomStubs,
   dependenciesToDependants,
   getTransitiveDependants,
-  isDerivedAtom,
-  isNestedStore,
-  isValueAtom,
   makeAtomId,
-  makeStoreId,
+  makeSelectId,
   mergeDependants,
   revealInternals,
   withInternalsTest,
 } from './utils';
 import zustand, { useStore } from 'zustand';
 import { GLOBAL_GET, GLOBAL_USE } from './globalStubs';
+import { isAtom, isSelect, isSelectAtomLike } from './utils/guards';
+import {
+  MergeParsedStoreDef,
+  ParseStoreDef,
+  parseStoreDef,
+} from './utils/parseStoreDef';
+import { mapEntries } from 'radash';
 
-export const atom: AtomFn = <T>(
-  ...args: [
-    initialOrGet: NotFunction<T> | (() => T) | undefined,
-    set?: ((value) => void) | undefined,
-  ]
-) => {
+export const atom = <T>(initial: T) => {
   const thisAtom = {
     ...atomStubs,
     get: () => GLOBAL_GET.current(thisAtom),
     use: () => GLOBAL_USE.current(thisAtom),
-    __glyx:
-      args[0] instanceof Function ||
-      (typeof args[0] === 'undefined' && args.length === 2)
-        ? {
-            type: 'derivedAtom',
-            get: args[0],
-            set: args[1],
-            isInited: false,
-            // isTracked: false,
-          }
-        : {
-            type: 'valueAtom',
-            initial: args[0],
-          },
+    __glyx: {
+      id: makeAtomId(),
+      type: 'atom' as const,
+      initial,
+    },
   } as any;
 
   return thisAtom;
 };
 
-const parseStoreDef = <T extends Record<string, Atom | Action>>(
-  storeDefinition: T,
-) => {
-  const entries = Object.entries(storeDefinition);
+// const getAndTrackDerivedAtom = (derivedAtom: DerivedAtom) => {
+//     const rawState = fn.__glyx.injected.getRawState();
+//     const state: Record<string, any> = {};
 
-  const definitionEntries = entries.filter(
-    (entry): entry is [string, Atom | NestedStore] => '__glyx' in entry[1],
-  );
+//     const newDependencies: Record<AtomId, AtomId[]> = {};
 
-  const valueAtomEntries = definitionEntries.flatMap((entry) => {
-    const internal = revealInternals(entry[1]);
-    if (isValueAtom(internal)) {
-      return [[entry[0], internal] as [string, Internal<ValueAtom>]];
-    }
-    return [];
-  });
-  const valueAtoms = Object.fromEntries(valueAtomEntries);
+//     const callStack: AtomId[] = [];
 
-  const derivedAtomEntries = definitionEntries.flatMap((entry) => {
-    const internal = revealInternals(entry[1]);
-    if (isDerivedAtom(internal)) {
-      return [[entry[0], internal] as [string, Internal<DerivedAtom>]];
-    }
-    return [];
-  });
-  const derivedAtoms = Object.fromEntries(derivedAtomEntries);
+//     const ORIGINAL_GLOBAL_GET = GLOBAL_GET.current;
+//     const ORIGINAL_GLOBAL_USE = GLOBAL_USE.current;
+//     GLOBAL_GET.current = (atom: Internal<Atom | Select>) => {
+//       if (isNestedStore(atom)) {
+//         throw new Error('Not implemented');
+//       }
+//       if (
+//         isValueAtom(atom) ||
+//         (isDerivedAtom(atom) && atom.__glyx.isInited)
+//       ) {
+//         return atom.__glyx.id in state
+//           ? state[atom.__glyx.id]
+//           : rawState[atom.__glyx.id];
+//       }
+//       callStack.push(atom.__glyx.id);
+//       const value = atom.__glyx.get();
+//       callStack.pop();
+//       state[atom.__glyx.id] = value;
+//       return value;
+//     };
+//     GLOBAL_USE.current = (atom: Internal<Atom | Select>) => {
+//       if (isNestedStore(atom)) {
+//         throw new Error('Not implemented');
+//       }
+//       const callee = callStack.at(-1);
 
-  const actionEntries = entries.filter(
-    (entry): entry is [string, Action] => entry[1] instanceof Function,
-  );
-  const actions = Object.fromEntries(actionEntries);
+//       if (callee) {
+//         if (callee in newDependencies) {
+//           newDependencies[callee] = [
+//             ...newDependencies[callee],
+//             atom.__glyx.id,
+//           ];
+//         } else {
+//           newDependencies[callee] = [atom.__glyx.id];
+//         }
+//       }
 
-  const nestedStoreEntries = definitionEntries.flatMap((entry) => {
-    const internal = revealInternals(entry[1]);
-    if (isNestedStore(internal)) {
-      return [[entry[0], internal] as [string, Internal<NestedStore>]];
-    }
-    return [];
-  });
-  const nestedStores = Object.fromEntries(nestedStoreEntries);
+//       if (
+//         isValueAtom(atom) ||
+//         (isDerivedAtom(atom) && atom.__glyx.isInited)
+//       ) {
+//         return atom.__glyx.id in state
+//           ? state[atom.__glyx.id]
+//           : rawState[atom.__glyx.id];
+//       }
+//       callStack.push(atom.__glyx.id);
+//       const value = atom.__glyx.get();
+//       callStack.pop();
+//       state[atom.__glyx.id] = value;
+//       return value;
+//     };
 
-  return {
-    valueAtoms,
-    derivedAtoms,
-    actions,
-    nestedStores,
-  };
-};
+//     const value = derivedAtom.use();
 
-export const nested = <
+//     GLOBAL_GET.current = ORIGINAL_GLOBAL_GET;
+//     GLOBAL_GET.current = ORIGINAL_GLOBAL_USE;
+
+//     const newDependants = dependenciesToDependants(newDependencies);
+//     fn.__glyx.injected.mergeDependants(newDependants);
+
+//     fn.__glyx.injected.setRawState(state);
+
+//     return value;
+//   };
+
+//   for (const atom of Object.values({
+//     ...def.derivedAtoms,
+//   })) {
+//     const get = () => {
+//       if (!atom.__glyx.isInited) {
+//         return getAndTrackDerivedAtom(atom);
+//       }
+//       return fn.__glyx.injected.getRawState()[atom.__glyx.id];
+//     };
+//     const use = () => {
+//       if (!atom.__glyx.isInited) {
+//         getAndTrackDerivedAtom(atom);
+//       }
+//       return fn.__glyx.injected.useRawState((s) => s[atom.__glyx.id]);
+//     };
+//     atom.__glyx.injected = {
+//       get,
+//       use,
+//     };
+//   }
+
+export const select = <
   TValue,
-  TLocatorArgs extends any[],
-  TStoreDefinition extends Record<string, DerivedAtom | NestedStore | Action>,
+  TSelectorArgs extends any[],
+  TSelectorReturn,
+  const TStoreDefinition extends Record<
+    string,
+    Select | Action
+  > /*| never = never*/,
 >(
-  locator: (...args: TLocatorArgs) => {
-    get: () => TValue;
-    set: ((value: NoInfer<TValue>) => void) | undefined;
-  },
-  definition: (atom: NoInfer<Atom<TValue>>) => TStoreDefinition,
-): NestedStore<TValue, TLocatorArgs, TStoreDefinition> => {
+  selector: (
+    ...args: TSelectorArgs
+  ) => TSelectorReturn &
+    [get: () => TValue, set?: (value: NoInfer<TValue>) => void],
+  opts: { memo: boolean },
+  definition?:
+    | ((atom: NoInfer<SelectAtomLike<TValue>>) => TStoreDefinition)
+    | undefined,
+) => {
+  type TSelector = (
+    ...args: TSelectorArgs
+  ) => TSelectorReturn extends [
+    get: () => TValue,
+    set?: (value: NoInfer<TValue>) => void,
+  ]
+    ? TSelectorReturn
+    : never;
+
   type TParsedStoreDefinition = ParseStoreDef<TStoreDefinition>;
-  type TAtoms = TParsedStoreDefinition['TAtoms'];
-  type TNestedStores = TParsedStoreDefinition['TNestedStores'];
+  type TSelects = TParsedStoreDefinition['TSelects'];
   type TActions = TParsedStoreDefinition['TActions'];
 
-  const storeId = makeStoreId();
+  // const defAtomLike = {
+  //   get: () => GLOBAL_GET.current(defAtomLike as any),
+  //   use: () => GLOBAL_USE.current(defAtomLike as any),
+  //   set: null as any,
+  //   __glyx: {
+  //     injected: {
+  //       get: () => defAtomLike.__glyx.stack.at(-1)(),
+  //     }
+  //   }
+  // };
+  // const def = definition ? parseStoreDef(definition(defAtomLike)) : undefined;
+  // console.log('def', def);
 
-  const fn: Internal<NestedStore<TValue, TLocatorArgs, TStoreDefinition>> = (
-    ...args: TLocatorArgs
+  const id = makeSelectId();
+
+  // const flatSelects = mapEntries(def!.selects ?? [], (k, v) => [
+
+  // ])
+
+  // declare const registerSelector: any;
+
+  // registerSelector(id, (parentArgs: any[], args: TSelectorArgs) => selector(...args));
+
+  const fn: Internal<Select<TValue, TSelector, TStoreDefinition>> = (
+    ...args
   ) => {
-    // const path = getPath(fn);
-    const locatorValue = fn.__glyx.locator(...args).get();
+    // const selected = selector(...args);
+    // const deepSelector = (deepArgs: any[][]) =>
 
-    let cachedStoreMap = fn.__glyx.injected.getRawState()[storeId] as
-      | Map<any, Record<string, AtomId | StoreId>>
-      | undefined; // TODO: rm as
-
-    if (!cachedStoreMap) {
-      cachedStoreMap = new Map();
-      fn.__glyx.injected.setRawState({
-        [storeId]: cachedStoreMap,
-      });
-    }
-
-    const cachedStore = cachedStoreMap?.get(locatorValue);
-
-    // this atom points to the located value
-    const atom = {
-      get: () => locatorValue,
-      use: () => null!,
-      // fn.__glyx.injected.useNestedStoreState((map) => map.get(locatorValue)),
-      set: () => {},
+    const thisAtomLike = {
+      get: () => GLOBAL_GET.current(thisAtomLike),
+      use: () => GLOBAL_USE.current(thisAtomLike),
+      set: null as any,
       __glyx: {
-        type: 'derivedAtom',
-        id: makeAtomId(),
+        id,
+        getIsInited: () => fn.__glyx.isInited,
+        injected: {
+          get: () => selector(...args)[0](),
+          use: () => fn.__glyx.injected.useStore(() => selector(...args)[0]()),
+        },
+        type: 'selectAtomLike' as const,
       },
-    };
+    } satisfies SelectAtomLike<TValue, TSelector>;
 
-    const def = parseStoreDef(fn.__glyx.store(atom));
-
-    if (cachedStore) {
-      for (const [key, value] of Object.entries({
-        ...def.valueAtoms,
-        ...def.derivedAtoms,
-      })) {
-        value.__glyx.id = cachedStore[key]! as AtomId;
-      }
-      // TODO: also init nested stores the same way
-    } else {
-      const cachedStore: Record<string, AtomId | StoreId> = {};
-      const state: Record<AtomId | StoreId, any> = {};
-      for (const [key, value] of Object.entries({
-        ...def.valueAtoms,
-        ...def.derivedAtoms,
-      })) {
-        value.__glyx.id = makeAtomId();
-        cachedStore[key] = value.__glyx.id;
-      }
-      state[storeId] = cachedStoreMap;
-      cachedStoreMap.set(locatorValue, cachedStore);
-
-      // Collect all initial values of valueAtoms
-      for (const atom of Object.values({
-        ...def.valueAtoms,
-      })) {
-        state[atom.__glyx.id] = atom.__glyx.initial;
-      }
-      fn.__glyx.injected.setRawState(state);
-    }
-
-    for (const atom of Object.values({
-      ...def.valueAtoms,
-    })) {
-      atom.__glyx.injected = {
-        get: () => fn.__glyx.injected.getRawState()[atom.__glyx.id],
-        use: () => fn.__glyx.injected.useRawState((s) => s[atom.__glyx.id]),
-      };
-    }
-
-    /**
-     * Gets the value of a derivedAtom and
-     * captures its dependencies.
-     */
-    const getAndTrackDerivedAtom = (derivedAtom: DerivedAtom) => {
-      const rawState = fn.__glyx.injected.getRawState();
-      const state: Record<string, any> = {};
+    if (!fn.__glyx.isInited) {
+      const ORIGINAL_GLOBAL_GET = GLOBAL_GET.current;
+      const ORIGINAL_GLOBAL_USE = GLOBAL_USE.current;
 
       const newDependencies: Record<AtomId, AtomId[]> = {};
 
-      const callStack: AtomId[] = [];
+      const callStack: (AtomId | SelectId)[] = [];
 
-      const ORIGINAL_GLOBAL_GET = GLOBAL_GET.current;
-      const ORIGINAL_GLOBAL_USE = GLOBAL_USE.current;
-      GLOBAL_GET.current = (atom: Internal<Atom | NestedStore>) => {
-        if (isNestedStore(atom)) {
-          throw new Error('Not implemented');
+      GLOBAL_GET.current = (atomLike: Internal<Atom | SelectAtomLike>) => {
+        const allState = fn.__glyx.injected.getState();
+
+        if (isAtom(atomLike)) {
+          return allState[atomLike.__glyx.id];
         }
-        if (
-          isValueAtom(atom) ||
-          (isDerivedAtom(atom) && atom.__glyx.isInited)
-        ) {
-          return atom.__glyx.id in state
-            ? state[atom.__glyx.id]
-            : rawState[atom.__glyx.id];
+        if (isSelectAtomLike(atomLike) && atomLike.__glyx.getIsInited()) {
+          return ORIGINAL_GLOBAL_GET(atomLike);
         }
-        callStack.push(atom.__glyx.id);
-        const value = atom.__glyx.get();
+        callStack.push(atomLike.__glyx.id);
+        const value = atomLike.__glyx.injected.get();
         callStack.pop();
-        state[atom.__glyx.id] = value;
+
         return value;
       };
-      GLOBAL_USE.current = (atom: Internal<Atom | NestedStore>) => {
-        if (isNestedStore(atom)) {
-          throw new Error('Not implemented');
-        }
+      GLOBAL_USE.current = (atomLike: Internal<Atom | SelectAtomLike>) => {
+        const allState = fn.__glyx.injected.getState();
         const callee = callStack.at(-1);
 
         if (callee) {
           if (callee in newDependencies) {
             newDependencies[callee] = [
               ...newDependencies[callee],
-              atom.__glyx.id,
+              atomLike.__glyx.id,
             ];
           } else {
-            newDependencies[callee] = [atom.__glyx.id];
+            newDependencies[callee] = [atomLike.__glyx.id];
           }
         }
 
-        if (
-          isValueAtom(atom) ||
-          (isDerivedAtom(atom) && atom.__glyx.isInited)
-        ) {
-          return atom.__glyx.id in state
-            ? state[atom.__glyx.id]
-            : rawState[atom.__glyx.id];
+        if (isAtom(atomLike)) {
+          return allState[atomLike.__glyx.id];
         }
-        callStack.push(atom.__glyx.id);
-        const value = atom.__glyx.get();
+        if (isSelectAtomLike(atomLike) && atomLike.__glyx.getIsInited()) {
+          return ORIGINAL_GLOBAL_GET(atomLike);
+        }
+        callStack.push(atomLike.__glyx.id);
+        const value = atomLike.__glyx.injected.get();
         callStack.pop();
-        state[atom.__glyx.id] = value;
+
         return value;
       };
 
-      const value = derivedAtom.use();
-
-      GLOBAL_GET.current = ORIGINAL_GLOBAL_GET;
-      GLOBAL_GET.current = ORIGINAL_GLOBAL_USE;
-
+      thisAtomLike.use();
+      fn.__glyx.isInited = true;
       const newDependants = dependenciesToDependants(newDependencies);
       fn.__glyx.injected.mergeDependants(newDependants);
 
-      fn.__glyx.injected.setRawState(state);
-
-      return value;
-    };
-
-    for (const atom of Object.values({
-      ...def.derivedAtoms,
-    })) {
-      const get = () => {
-        if (!atom.__glyx.isInited) {
-          return getAndTrackDerivedAtom(atom);
-        }
-        return fn.__glyx.injected.getRawState()[atom.__glyx.id];
-      };
-      const use = () => {
-        if (!atom.__glyx.isInited) {
-          getAndTrackDerivedAtom(atom);
-        }
-        return fn.__glyx.injected.useRawState((s) => s[atom.__glyx.id]);
-      };
-      atom.__glyx.injected = {
-        get,
-        use,
-      };
+      GLOBAL_GET.current = ORIGINAL_GLOBAL_GET;
+      GLOBAL_USE.current = ORIGINAL_GLOBAL_USE;
     }
 
-    const getStore = () => {};
+    // defAtomLike.__glyx.injected.get =
+    // for (const s of Object.values(def?.selects ?? [])) {
+    //   s.__glyx.injected.
+    // }
+
+    const def = definition
+      ? parseStoreDef(definition(thisAtomLike))
+      : undefined;
 
     return {
-      // get: fn.__glyx.injected.getNestedStoreState,
-      // use: () => {
-      //   getStore();
-      //   return useStore(zustandStore) as any as TAtoms;
-      // },
-      ...(def.nestedStores as any as TNestedStores),
-      ...(def.actions as TActions),
-      ...({ ...def.valueAtoms, ...def.derivedAtoms } as TAtoms),
+      ...thisAtomLike,
+      ...def?.actions,
+      ...def?.selects,
     } as any;
   };
+
   fn.__glyx = {
-    id: storeId,
+    id,
     isInited: false,
-    locator,
-    injected: {
-      // getNestedStoreState: null,
-      // setNestedStoreState: null,
-      // useNestedStoreState: null,
-      getRawState: null,
-      setRawState: null,
-      firstRun: null,
-    },
-    store: definition,
-    type: 'nestedStore',
+    // selector: selector as TSelector,
+    // clearCache: () => {},
+    injected: {} as any,
+    // test: null as any as TParsedStoreDefinition,
+    // test2: null as any as Internal<Select<TValue, TSelector, TStoreDefinition>>,
+    // test3: null as any as MergeParsedStoreDef<TParsedStoreDefinition>,
+    // store: definition,
+    type: 'select' as const,
   };
 
   return fn;
 };
-
-// const test = nested(
-//   (val: number) => ({ get: () => 5, set: (val) => {} }),
-//   () => {
-//     const test = atom(0);
-//     return { test };
-//   },
-// );
-// type Test = typeof test
-// const test2 = revealInternals(test)
 
 export const store = <TStoreDefinition extends Record<string, Atom | Action>>(
   definition: () => TStoreDefinition,
 ) => {
   type TParsedStoreDefinition = ParseStoreDef<TStoreDefinition>;
   type TAtoms = TParsedStoreDefinition['TAtoms'];
-  type TNestedStores = TParsedStoreDefinition['TNestedStores'];
+  type TSelects = TParsedStoreDefinition['TSelects'];
   type TActions = TParsedStoreDefinition['TActions'];
 
-  const storeDefinition = definition();
+  const def = definition();
 
-  const { valueAtoms, derivedAtoms, actions, nestedStores } =
-    parseStoreDef(storeDefinition);
+  const { atoms, selects, actions } = parseStoreDef(def);
 
-  const root = revealInternals(
-    nested(
-      () => ({ get: () => undefined, set: () => {} }),
-      () => storeDefinition,
-    ),
+  const zustandStore = createStore(() =>
+    mapEntries(atoms, (k, v) => [v.__glyx.id, v.__glyx.initial]),
   );
-
-  const zustandStore = createStore(() => ({}));
   let dependants: Record<AtomId, AtomId[]> = {};
 
-  root.__glyx.injected.getRawState = () => zustandStore.getState();
-  root.__glyx.injected.setRawState = (state) => {
-    zustandStore.setState(state);
-  };
-  root.__glyx.injected.useRawState = (selector) =>
-    useStore(zustandStore, selector);
-  // root.__glyx.injected.getDependants = () => dependants;
-  root.__glyx.injected.mergeDependants = (newDependants) => {
-    dependants = mergeDependants(dependants, newDependants);
-  };
+  for (const a of Object.values(atoms)) {
+    a.__glyx.injected = {
+      get: () => zustandStore.getState()[a.__glyx.id],
+      use: () => {
+        return zustandStore.getState()[a.__glyx.id];
+      },
+    };
+  }
 
-  root();
-
-  // #region old
-
-  // /**
-  //  * Gets the value of a derivedAtom and
-  //  * captures its dependencies.
-  //  */
-  // const getAndTrackDerivedAtom = (derivedAtom: DerivedAtom) => {
-  //   const allState = zustandStore.getState();
-  //   const state: Record<string, any> = {};
-
-  //   const newDependencies: Record<string, string[]> = {};
-
-  //   const atoms = { ...valueAtoms, ...derivedAtoms };
-
-  //   const callStack: string[] = [];
-  //   for (const atom of Object.values(atoms)) {
-  //     const get = () => {
-  //       // valueAtoms and tracked derivedAtoms are already in the state
-  //       if (
-  //         isValueAtom(atom) ||
-  //         (isDerivedAtom(atom) && atom.__glyx.isInited)
-  //       ) {
-  //         return name in state ? state[name] : allState[name];
-  //       }
-  //       callStack.push(name);
-  //       const value = atom.__glyx.get();
-  //       callStack.pop();
-  //       state[name] = value;
-  //       return value;
-  //     };
-
-  //     const use = () => {
-  //       const callee = callStack.at(-1);
-
-  //       if (callee) {
-  //         if (newDependencies[callee]) {
-  //           newDependencies[callee].push(name);
-  //         } else {
-  //           newDependencies[callee] = [name];
-  //         }
-  //       }
-
-  //       if (
-  //         isValueAtom(atom) ||
-  //         (isDerivedAtom(atom) && atom.__glyx.isInited)
-  //       ) {
-  //         return name in state ? state[name] : allState[name];
-  //       }
-  //       callStack.push(name);
-  //       const value = atom.__glyx.get();
-  //       callStack.pop();
-  //       state[name] = value;
-  //       atom.__glyx.isInited = true;
-
-  //       return value;
-  //     };
-
-  //     destubAtomMethods(atom, { get, use });
-  //   }
-
-  //   const value = derivedAtom.use();
-
-  //   prepareAtomsForUse();
-
-  //   const newDependants = dependenciesToDependants(newDependencies);
-  //   dependants = mergeDependants(dependants, newDependants);
-
-  //   zustandStore.setState(state);
-
-  //   return value;
-  // };
-
-  // /**
-  //  * Sets a valueAtom's value and updates all dependant atoms
-  //  */
-  // const setValueAtom = (name: string, value: any) => {
-  //   // get all atoms that will be affected by this change
-  //   const transitiveDependants = getTransitiveDependants(dependants, name);
-
-  //   const transitiveDependantEntries: [string, Internal<DerivedAtom>][] =
-  //     transitiveDependants.map((key) => [key, derivedAtoms[key]]);
-
-  //   // get all atoms as the current source of truth
-  //   const allState = zustandStore.getState();
-
-  //   // second layer of state containing the new values,
-  //   // enabling a batch update
-  //   const state: Record<string, any> = {};
-  //   state[name] = value;
-
-  //   // replace the getter of all atoms to use the batch state
-  //   // or the actual state if the atom is not affected by the change
-  //   for (const atom of Object.values({ ...valueAtoms, ...derivedAtoms })) {
-  //     const path = getPath(atom);
-  //     const [name] = path;
-  //     const get = () => {
-  //       // use the batch state if available for this atom
-  //       return name in state ? state[name] : allState[name];
-  //     };
-  //     destubAtomMethods(atom, {
-  //       get,
-  //       use: get,
-  //     });
-  //   }
-
-  //   // call the getter fn of this atom, which
-  //   // will call the destubedd getters of all dependencies
-  //   for (const [name, atom] of transitiveDependantEntries) {
-  //     state[name] = atom.__glyx.get();
-  //   }
-
-  //   // finally, commit the batched state
-  //   zustandStore.setState(state);
-
-  //   // go back to the "user-space" destubs
-  //   prepareAtomsForUse();
-  // };
-
-  // /**
-  //  * Calling a derived atom's set method is not any different
-  //  * than calling an action function. Or in other words,
-  //  * it's just a normal function that sets other atoms.
-  //  */
-  // const setDerivedAtom = (atom: Internal<DerivedAtom>, value: any) => {
-  //   const setter = atom.__glyx.set;
-  //   // this should never happen, I think
-  //   if (!setter) {
-  //     throw new Error('Derived atom is read-only');
-  //   }
-  //   setter(value);
-  // };
-
-  // const prepareAtomsForUse = () => {
-  //   for (const atom of Object.values({ ...valueAtoms, ...derivedAtoms })) {
-  //     const [name] = getPath(atom);
-  //     const allState = zustandStore.getState();
-  //     const get = () => {
-  //       if (isDerivedAtom(atom) && !atom.__glyx.isInited) {
-  //         return getAndTrackDerivedAtom(atom);
-  //       }
-  //       return allState[name];
-  //     };
-  //     destubAtomMethods(atom, {
-  //       get,
-  //       use: () => {
-  //         if (isDerivedAtom(atom) && !atom.__glyx.isInited) {
-  //           getAndTrackDerivedAtom(atom);
-  //         }
-  //         return useStore(zustandStore, (s) => s[name]);
-  //       },
-  //       set: isDerivedAtom(atom)
-  //         ? (value) => setDerivedAtom(atom, value)
-  //         : (value) => setValueAtom(name, value),
-  //     });
-  //   }
-  // };
-
-  // /**
-  //  * Init all known atoms
-  //  */
-  // const trackStore = () => {
-  //   for (const atom of Object.values(derivedAtoms)) {
-  //     if (!atom.__glyx.isInited) {
-  //       getAndTrackDerivedAtom(atom);
-  //     }
-  //   }
-  // };
-
-  // const getStore = () => {
-  //   trackStore();
-  //   return zustandStore.getState() as any as TAtoms;
-  // };
-
-  // const prepareNestedStoresForUse = () => {
-  //   for (const nestedStore of Object.values(nestedStores)) {
-  //     const path = getPath(nestedStore);
-  //     const [name] = path;
-  //     destubNestedStore(nestedStore, (...args) => {
-  //       const locatorValue = nestedStore.__glyx.locator(...args).get();
-
-  //       const map = zustandStore.getState()[name] as Map<any, any>;
-  //       const cached = map.get(locatorValue);
-  //       let locatedStoreState: any;
-  //       if (!cached) {
-  //         locatedStoreState = nestedStore.__glyx.store(locatorValue);
-  //         map.set(locatorValue, locatedStoreState);
-  //         zustandStore.setState({
-  //           [name]: map,
-  //         });
-  //       } else {
-  //         locatedStoreState = cached;
-  //       }
-
-  //       const atom = {
-  //         get: () => locatedStoreState,
-  //         use: () => useStore(zustandStore, (s) => s[name].get(locatorValue)),
-  //         set: () => {},
-  //       };
-
-  //       const definition = parseStoreDef(nestedStore.__glyx.store(atom), path);
-
-  //       return atom;
-  //     });
-  //   }
-  // };
-
-  // prepareAtomsForUse();
-
-  // #endregion old
+  for (const s of Object.values(selects)) {
+    s.__glyx.injected = {
+      getState: () => zustandStore.getState(),
+      useStore: (selector) => useStore(zustandStore, selector),
+      mergeDependants: (newDependants) => {
+        dependants = mergeDependants(dependants, newDependants);
+      },
+    };
+  }
 
   const __glyx_test =
     process.env.NODE_ENV === 'test'
@@ -603,9 +361,9 @@ export const store = <TStoreDefinition extends Record<string, Atom | Action>>(
       //   getStore();
       //   return useStore(zustandStore) as any as TAtoms;
       // },
-      ...(nestedStores as any as TNestedStores),
       ...(actions as TActions),
-      ...({ ...valueAtoms, ...derivedAtoms } as TAtoms),
+      ...(atoms as TAtoms),
+      ...(selects as any as TSelects),
     },
     __glyx_test,
   );

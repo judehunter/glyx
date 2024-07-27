@@ -1,77 +1,112 @@
-import { atomStubs } from './utils';
+import { MergeParsedStoreDef, ParseStoreDef } from './utils/parseStoreDef';
 
 export type NotFunction<T> = T extends Function ? never : T;
 
-export type WithInternals<
-  TTarget,
-  TDefinition = ValueAtomDefinition<any> | DerivedAtomDefinition<any>,
-> = TTarget & ({} | { __glyx: TDefinition });
+export type WithInternals<TTarget, TDefinition> = TTarget &
+  ({} | { __glyx: TDefinition });
+export type Internal<T> = Extract<T, { __glyx: any }>;
+export type WithInternalsTest<T, TTest> = T & ({} | { __glyx_test: TTest });
+export type InternalTest<T> = Extract<T, { __glyx_test: any }>;
 
-export type AtomMethods<T = any> = {
+export type AtomLikeMethods<T = any> = {
   get: () => T;
   use: () => T;
   set: (value: NoInfer<T>) => void;
 };
 
-export type ValueAtomDefinition<T = any> = {
-  id: AtomId;
-  initial: T;
-  type: 'valueAtom';
-};
-export type DerivedAtomDefinition<T = any> = {
-  id: AtomId;
-  name?: T;
-  // inited = has been calculated at least once
-  isInited: boolean;
-  // tracked = dependencies have been captured
-  isTracked: boolean;
+export type AtomLikeMethodsGetUse<T = any> = {
   get: () => T;
-  set: ((value: T) => void) | undefined;
-  type: 'derivedAtom';
-};
-export type NestedStoreDefinition<
-  TValue = any,
-  TLocatorArgs extends any[] = any[],
-> = {
-  id: string;
-  isInited: boolean;
-  locator: (...args: TLocatorArgs) => {
-    get: () => TValue;
-    set: ((value: NoInfer<TValue>) => void) | undefined;
-  };
-  injected: Record<string, any>;
-  store: (
-    atom: NoInfer<Atom<TValue>>,
-  ) => Record<string, Atom | NestedStore | Action>;
-  type: 'nestedStore';
+  use: () => T;
 };
 
-export type ValueAtom<T = any> = WithInternals<
-  AtomMethods<T>,
-  ValueAtomDefinition<T>
+export type AtomLikeMethodsSet<T = any> = {
+  set: (value: NoInfer<T>) => void;
+};
+
+export type AtomDefinition<T = any> = {
+  id: AtomId;
+  initial: T;
+  type: 'atom';
+  injected: {
+    get: () => T;
+    use: () => T;
+  };
+};
+export type SelectDefinition<
+  TValue = any,
+  TSelector extends (
+    ...args: any
+  ) => [
+    get: () => TValue,
+    set?: ((value: NoInfer<TValue>) => void) | undefined,
+  ] = () => [() => TValue],
+> = {
+  id: SelectId;
+  isInited: boolean;
+  // selector: TSelector;
+  injected: {
+    getState: () => Record<string, any>;
+    useStore: (selector: () => any) => Record<string, any>;
+    mergeDependants: (dependants: Record<string, any>) => void;
+  };
+  // store:
+  //   | ((atom: NoInfer<Atom<TValue>>) => Record<string, Atom | Select | Action>)
+  //   | undefined;
+  type: 'select';
+};
+export type SelectAtomLikeDefinition<TValue = any> = {
+  id: SelectId;
+  getIsInited: () => boolean;
+  injected: {
+    get: () => TValue;
+    use: () => TValue;
+  };
+  type: 'selectAtomLike';
+};
+
+export type Atom<T = any> = WithInternals<
+  AtomLikeMethods<T>,
+  AtomDefinition<T>
 >;
-export type DerivedAtom<T = any> = WithInternals<
-  AtomMethods<T>,
-  DerivedAtomDefinition<T>
->;
-export type NestedStore<
-  T = any,
-  TLocatorArgs extends any[] = any[],
-  TStore extends Record<string, Atom | NestedStore | Action> = Record<
+
+export type Select<
+  TValue = any,
+  TSelector extends (
+    ...args: any
+  ) => [
+    get: () => TValue,
+    set?: ((value: NoInfer<TValue>) => void) | undefined,
+  ] = () => [() => TValue],
+  TStore extends Record<string, Atom | Select | Action> | undefined = Record<
     string,
     any
   >,
 > = WithInternals<
   (
-    ...args: TLocatorArgs
-  ) => AtomMethods<T> & MergeParsedStoreDefinition<ParseStoreDef<TStore>>,
-  NestedStoreDefinition<T, TLocatorArgs>
+    ...args: Parameters<TSelector>
+  ) => SelectAtomLike<TValue, TSelector> &
+    (TStore extends Record<any, any>
+      ? MergeParsedStoreDef<ParseStoreDef<TStore>>
+      : {}),
+  //
+  SelectDefinition<TValue, TSelector>
 >;
-export type Atom<T = any> = ValueAtom<T> | DerivedAtom<T>;
 
-export type Internal<T> = Extract<T, { __glyx: any }>;
-export type WithInternalsTest<T, TTest> = T & ({} | { __glyx_test: TTest });
-export type InternalTest<T> = Extract<T, { __glyx_test: any }>;
+export type SelectAtomLike<
+  TValue = any,
+  TSelector extends (
+    ...args: any
+  ) => [
+    get: () => TValue,
+    set?: ((value: NoInfer<TValue>) => void) | undefined,
+  ] = () => [() => TValue],
+> = WithInternals<
+  AtomLikeMethodsGetUse<TValue> &
+    (ReturnType<TSelector>[1] extends undefined
+      ? {}
+      : AtomLikeMethodsSet<TValue>),
+  SelectAtomLikeDefinition<TValue>
+>;
 
 export type GetDefinition<TAtom> = TAtom extends Record<string, any>
   ? TAtom['__glyx']
@@ -79,48 +114,5 @@ export type GetDefinition<TAtom> = TAtom extends Record<string, any>
 
 export type Action = (...args: any[]) => void;
 
-type ValueAtomFn = <T>(initial: NotFunction<T>) => ValueAtom<T>;
-
-type DerivedAtomFn = <T>(
-  get: (() => T) | undefined,
-  set?: ((value: NoInfer<T>) => void) | undefined,
-) => DerivedAtom<T>;
-
-export type AtomFn = ValueAtomFn & DerivedAtomFn;
-
-export type ParseStoreDef<
-  T extends Record<string, Atom | NestedStore | Action>,
-> = {
-  TAtoms: {
-    [K in keyof T as Internal<T[K]>['__glyx'] extends {
-      type: 'valueAtom' | 'derivedAtom';
-    }
-      ? K
-      : never]: T[K];
-  };
-  TNestedStores: {
-    [K in keyof T as Internal<T[K]>['__glyx'] extends {
-      type: 'nestedStore';
-    }
-      ? K
-      : never]: T[K];
-  };
-  TActions: {
-    [K in keyof T as Internal<T[K]>['__glyx'] extends {
-      type: 'valueAtom' | 'derivedAtom';
-    }
-      ? never
-      : K]: T[K];
-  };
-};
-
-type MergeParsedStoreDefinition<T extends Record<string, any>> = T['TAtoms'] &
-  T['TNestedStores'] &
-  T['TActions'];
-
-export type NestedStoreLocatorArgs<T extends Record<string, any>> = Parameters<
-  T['__glyx']['locator']
->;
-
 export type AtomId = string & { __brand: 'AtomId' };
-export type StoreId = string & { __brand: 'StoreId' };
+export type SelectId = string & { __brand: 'SelectId' };

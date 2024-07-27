@@ -1,5 +1,5 @@
 import { beforeAll, expect, test, vi } from 'vitest';
-import { atom, store as _store, nested } from '.';
+import { atom, store as _store, select } from '.';
 import { act, render, renderHook } from '@testing-library/react';
 import React from 'react';
 import { revealTestInternals } from './utils';
@@ -209,7 +209,7 @@ test.todo('paths', () => {
   const s = store(() => {
     const a = atom([1, 2]);
     const a2 = atom(() => a.use().map((v) => v * 2));
-    const b = nested(
+    const b = select(
       (idx: number) => ({
         get: () => a.use()[idx],
         set: (val) => a.set(a.use().map((v, i) => (i === idx ? val : v))),
@@ -228,7 +228,7 @@ test.todo('paths', () => {
 test('nested store', () => {
   const s = store(() => {
     const a = atom([1, 2]);
-    const b = nested(
+    const b = select(
       (idx: number) => ({
         get: () => a.use()[idx],
         set: (val) => a.set(a.use().map((v, i) => (i === idx ? val : v))),
@@ -249,11 +249,72 @@ test('nested store', () => {
 test.only('new impl', () => {
   const s = store(() => {
     const counter = atom(1);
-    const double = atom(() => counter.use() * 2);
-    return { counter, double };
+    const mult = select(
+      (mult) => [() => counter.use() * mult],
+      {
+        memo: true,
+      },
+      (a) => {
+        const double = select(() => [() => '' + a.use() * 2], {
+          memo: true,
+        });
+        const test = () => {};
+        return { double, test };
+      },
+    );
+    return { counter, mult };
   });
-  console.log(s.double.get());
-  console.log(s.double.get());
-  console.log(s.__glyx_test.get());
-  // expect(s.).toEqual({ counter: 0, foo: 'abc' });
+
+  /*
+  mult: ([5]) -> {
+    value: 5,
+    selectors: {
+      double: ([]) -> {
+        value: 10
+      }
+    }
+  }
+
+  {
+    selects: {
+      mult: [
+        [5] -> {
+          value: 5,
+          selects: {
+            double: [
+              [] -> {
+                value: 10
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+  */
+
+  s.mult(5).double().get();
+
+  // const doubleCounter = select(
+  //   () => [() => 2],
+  //   {
+  //     memo: true,
+  //   },
+  //   (a) => {
+  //     const quadrupleCounter = select(() => [() => a.use() * 2], {
+  //       memo: true,
+  //     });
+  //     const test = () => {};
+  //     return { quadrupleCounter, test };
+  //   },
+  // );
+
+  // type Test = typeof doubleCounter.__glyx.test;
+  // type Test2 = typeof doubleCounter.__glyx.test2;
+  // type Test3 = typeof doubleCounter.__glyx.test3;
+  // console.log(s.__glyx_test.get());
+  // console.log(s.__glyx_test.getDependants());
+  // console.log(s.doubleCounter().get());
+  // console.log(s.__glyx_test.get());
+  // console.log(s.__glyx_test.getDependants());
 });
