@@ -17,6 +17,7 @@ export type Atom<TValue = unknown> = {
   _glyx: {
     type: 'atom'
     initialValue: TValue
+    onInit?: () => void
 
     // supplied by store:
     name: string
@@ -30,6 +31,10 @@ export type Atom<TValue = unknown> = {
     set(value: TValue): void
   }
 }
+
+export type AtomType<TAtom extends Atom> = TAtom extends Atom<infer TValue>
+  ? TValue
+  : never
 
 const makeGet = (target: Atom) => (customSelector?: (value: any) => any) => {
   pushToDepsListIfTracking(target._glyx.name)

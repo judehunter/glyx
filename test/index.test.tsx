@@ -154,4 +154,69 @@ test('updates are batched', () => {
   expect(calls()).toEqual([[3], [7]])
 })
 
+test('action inside store', () => {
+  const $ = store(() => {
+    const a = atom(1)
+    const increment = () => a.set(a.get() + 1)
+    return { a, increment }
+  })
+
+  const calls = makeHookCallSpy(() => $.a.use())
+
+  expect(calls()).toEqual([[1]])
+
+  act(() => {
+    $.increment()
+  })
+
+  expect(calls()).toEqual([[1], [2]])
+})
+
+test('selectors are not called when something else updates', () => {
+  const $ = store(() => {
+    const a = atom(1)
+    const b = atom(2)
+    return { a, b }
+  })
+
+  const spy = vi.fn()
+  const calls = makeHookCallSpy(() =>
+    $.a.use((x) => {
+      spy(x)
+      return x
+    }),
+  )
+
+  expect(calls()).toEqual([[1]])
+
+  act(() => {
+    $.b.set(3)
+  })
+
+  expect(calls()).toEqual([[1]])
+})
+
+test('advanced use case', () => {
+  const $ = store(() => {
+    const $user = group(() => {
+      const user = atom({ name: 'John' })
+      const loginError = atom<Error | undefined>(undefined)
+      const userError = atom<Error | undefined>(undefined)
+
+      return { user, loginError, userError }
+    })
+
+    const $canvas = group(() => {
+      const nodes = atom([])
+      const edges = atom([])
+
+      return { nodes, edges }
+    })
+
+    return { $user, $canvas }
+  })
+
+  // $.$canvas.
+})
+
 // todo: select selector gets another select selector and tracks deps correctly (should work already since only the first select will start tracking deps at that point)

@@ -23,6 +23,8 @@ const setupAtom = (handles: Handles, target: Atom, key: string) => {
     subWithDeps: handles.sub,
     set: (value: any) => handles.set(key, value),
   }
+
+  target._glyx.onInit?.()
 }
 
 const setupSelect = (handles: Handles, target: any, key: string) => {
