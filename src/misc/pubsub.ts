@@ -13,6 +13,9 @@ export const pubsub = () => {
       throw new Error('no pending updates')
     }
 
+    // replace the stored object so that the reference changes.
+    // this is primarily used for useSyncExternalStoreWithSelector behavior.
+    // todo: consider if this can be optimized more (though it should be fine)
     stored = { ...stored, ...pendingUpdates }
 
     const keys = Object.keys(pendingUpdates)
@@ -44,18 +47,13 @@ export const pubsub = () => {
   }
 
   const setKey = (key: string, value: any) => {
-    // replace the stored object so that the reference changes.
-    // this is primarily used for useSyncExternalStoreWithSelector behavior.
-    // todo: consider if this can be optimized more (though it should be fine)
-    stored = { ...stored, [key]: value }
-
     if (pendingUpdates === undefined) {
       if (applyPromise) {
         throw new Error('applyPromise already exists')
       }
 
       pendingUpdates = {}
-      applyPromise = Promise.resolve().then(applyUpdates)
+      applyPromise = new Promise((resolve) => setTimeout(resolve, 0))
     }
 
     pendingUpdates[key] = value
@@ -106,4 +104,3 @@ export const pubsub = () => {
     getAnonName,
   }
 }
-

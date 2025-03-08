@@ -20,16 +20,16 @@ X nested over atom
 
 middleware
 devtools
-persistence
+X persistence
 immer
 
 X typings
 
 select.set
 
-think about actions (fns in stores)
+X think about actions (fns in stores)
 
-cleanup of errors in selectors in respsect to deps (must be resilient)
+X cleanup of errors in selectors in respect to deps (must be resilient)
 
 store context and global version
 
@@ -38,6 +38,7 @@ object atom that creates atoms for each key to isolate updates
 slice method that is just a group that unwraps?
 
 X derived atoms
+- eqFn?
 
 prevent atoms from being returned in nested
 
@@ -56,6 +57,12 @@ remove values from pending updates that are identical? what about eqfn?
 function to wrap dependencies that should not be tracked (akin to solid)
 
 group set
+
+maybe anon atoms should always be explicitly marked as anon to avoid mistakes?
+
+wait for commit fn that doesn't force commit like flush and returns a promise
+
+flush directly after store is inited?
 */
 
 /*

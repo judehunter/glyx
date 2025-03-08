@@ -1,5 +1,4 @@
 export type MakeInternals<T> = {
-  internals: T
   getInternals: () => T
   setInternals: (newInternals: T) => void
   setPartialInternals: (newInternals: Partial<T>) => void

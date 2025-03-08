@@ -5,6 +5,9 @@ import { act, render, renderHook } from '@testing-library/react'
 import { assertWith, makeHookCallSpy } from './utils'
 import React, { useState } from 'react'
 import { StoreInternals } from '../src/methods/store'
+import { DEPS_LIST, TRACKING_DEPS } from '../src/misc/deps'
+import { AtomInternals } from '../src/methods/atom'
+import { SelectInternals } from '../src/methods/select'
 
 test('isolated updates with dependency tracking', () => {
   const $ = store(() => {
@@ -216,6 +219,34 @@ test('selectors are not called when something else updates', () => {
   })
 
   expect(calls()).toEqual([[1]])
+})
+
+test('select fails gracefully on error thrown in selector', () => {
+  const $ = store(() => {
+    const a = atom(1)
+    const b = select((shouldThrow: boolean) => {
+      if (shouldThrow) {
+        throw new Error('test')
+      }
+      return a.get()
+    })
+
+    return { a, b }
+  })
+
+  assertWith<StoreInternals>($)
+  assertWith<SelectInternals>($.b)
+
+  expect(() => $.b(true).get()).toThrow('test')
+  expect(TRACKING_DEPS).toBe(false)
+  expect(DEPS_LIST).toEqual([])
+
+  expect($.b.getInternals().depsList).toBeUndefined()
+
+  expect(() => $.b(false).get()).not.toThrow()
+  expect(TRACKING_DEPS).toBe(false)
+  expect(DEPS_LIST).toEqual([])
+  expect($.b.getInternals().depsList).toEqual(['a'])
 })
 
 // declare const map: any

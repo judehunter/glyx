@@ -1,5 +1,5 @@
 import { useRef, useMemo } from 'react'
-import { pushToDepsListIfTracking } from '../misc/deps'
+import { callAndTrackDeps, pushToDepsListIfTracking } from '../misc/deps'
 import { runCustomSelector } from '../misc/runCustomSelector'
 import { useSyncExternalStoreWithSelector } from '../misc/useSyncExternalStoreWithSelector'
 import { identity, uniqueDeps } from '../misc/utils'
@@ -190,7 +190,14 @@ export const atom = <TValue>(initialValue: TValue) => {
     use,
 
     /**
-     * Not implemented
+     * Subscribes to the atom with a callback function.
+     *
+     * This is useful for
+     * - manual subscriptions in effects,
+     * - transient updates of components
+     * - advanced use cases like building other glyx primitives (see: `event`)
+     *
+     * You probably don't need to use it in most cases.
      */
     sub,
 
@@ -199,7 +206,7 @@ export const atom = <TValue>(initialValue: TValue) => {
      *
      * Atom updates are batched, and will be committed once all
      * synchronous code runs. If you want to force the commit,
-     * call `$._glyx.getStored().flush()`. However, this is normally
+     * call `$.flush()`. However, this is normally
      * discouraged.
      */
     set,

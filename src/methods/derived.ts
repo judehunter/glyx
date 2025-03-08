@@ -1,11 +1,13 @@
+import { assertWith } from '../../test/utils'
 import { callAndTrackDeps } from '../misc/deps'
-import { Atom, atom } from './atom'
+import { Atom, atom, AtomInternals } from './atom'
 import { onInit } from './onInit'
 
 export type Derived<TValue> = Omit<Atom<TValue>, 'set'>
 
 /**
  * Creates an atom that is automatically updated when the
+ * value of the atoms it depends on changes.
  *
  * When compared to a `select`, the value of this atom, like any other
  * atom, is stored in the store. Whereas a `select` is recalculated
@@ -31,13 +33,16 @@ export type Derived<TValue> = Omit<Atom<TValue>, 'set'>
 export const derived = <TValue>(fn: (...args: any[]) => TValue) => {
   const target = atom<TValue>(undefined!)
 
-  onInit(({ subKeys }) => {
+  onInit(({ subKeys, setKeyInitialValue }) => {
     const { value, depsList } = callAndTrackDeps(
       { trackDeps: true, errorOnAlreadyTrackingDeps: true },
       fn,
     )
 
-    target.set(value)
+    assertWith<AtomInternals>(target)
+    const internals = target.getInternals()
+
+    setKeyInitialValue(internals.name, value)
 
     if (!depsList) {
       return

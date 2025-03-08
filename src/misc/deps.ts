@@ -25,7 +25,16 @@ export const callAndTrackDeps = (
     }
   }
 
-  const value = fn()
+  let value: any;
+  try {
+    value = fn()
+  } catch (e) {
+    if (isTrackingDepsNow) {
+      TRACKING_DEPS = false
+      DEPS_LIST = []
+    }
+    throw e
+  }
 
   const depsList = isTrackingDepsNow ? [...DEPS_LIST] : undefined
 

@@ -5,9 +5,12 @@ import { act, render, renderHook } from '@testing-library/react'
 import { assertWith, makeHookCallSpy } from './utils'
 import React from 'react'
 import { StoreInternals } from '../src/methods/store'
-import { Atom } from '../src/methods/atom'
+import { Atom, AtomInternals } from '../src/methods/atom'
+import { pick } from '../src/middleware/pick'
+import { omit } from '../src/middleware/omit'
+import { name } from '../src/middleware/name'
 
-test('atom.get() of initial value', () => {
+test('.get() of initial value', () => {
   const $ = store(() => {
     const counter = atom(5)
 
@@ -17,7 +20,7 @@ test('atom.get() of initial value', () => {
   expect($.counter.get()).toBe(5)
 })
 
-test('atom.set()', () => {
+test('.set()', () => {
   const $ = store(() => {
     const counter = atom(5)
 
@@ -34,7 +37,7 @@ test('atom.set()', () => {
   expect($.getInternals().getStored().getKey('counter')).toBe(10)
 })
 
-test.skip('atom.sub()', () => {
+test('.sub()', () => {
   const $ = store(() => {
     const counter = atom(0)
 
@@ -43,24 +46,22 @@ test.skip('atom.sub()', () => {
 
   assertWith<StoreInternals>($)
 
-  const listener = vi.fn()
+  const spy = vi.fn()
 
-  $.counter.sub(listener)
+  $.counter.sub(spy)
 
   $.counter.set(1)
   $.getInternals().getStored().flush()
 
-  expect(listener).toHaveBeenCalledTimes(1)
-  expect(listener).toHaveBeenCalledWith(1)
+  expect(spy.mock.calls).toEqual([[]])
 
   $.counter.set(5)
   $.getInternals().getStored().flush()
 
-  expect(listener).toHaveBeenCalledTimes(2)
-  expect(listener).toHaveBeenCalledWith(5)
+  expect(spy.mock.calls).toEqual([[], []])
 })
 
-test('atom.use()', () => {
+test('.use()', () => {
   const $ = store(() => {
     const counter = atom(10)
 
@@ -91,7 +92,7 @@ test('atom.use()', () => {
   expect(result.current).toBe(20)
 })
 
-test('atom.get() with custom selector', () => {
+test('.get() with custom selector', () => {
   const $ = store(() => {
     const a = atom(10)
 
@@ -101,9 +102,7 @@ test('atom.get() with custom selector', () => {
   expect($.a.get((x) => x + 5)).toBe(15)
 })
 
-test('atom.get() with custom selector that access another atom')
-
-test('atom.use() with custom selector', () => {
+test('.use() with custom selector', () => {
   const $ = store(() => {
     const a = atom(10)
 
@@ -124,7 +123,18 @@ test('atom.use() with custom selector', () => {
   expect(calls()).toEqual([[15], [16]])
 })
 
-test('atom.use() with custom selector that access another atom', () => {
+test('.get() with custom selector that access another atom', () => {
+  const $ = store(() => {
+    const a = atom(10)
+    const b = atom(100)
+
+    return { a, b }
+  })
+
+  expect($.a.get((x) => x + $.b.get())).toBe(110)
+})
+
+test('.use() with custom selector that access another atom', () => {
   const $ = store(() => {
     const a = atom(10)
     const b = atom(100)
@@ -153,7 +163,7 @@ test('atom.use() with custom selector that access another atom', () => {
   expect(calls()).toEqual([[110], [111], [211]])
 })
 
-test('atom.use() with custom selector closing over component state', () => {
+test('.use() with custom selector closing over component state', () => {
   const $ = store(() => {
     const a = atom(1)
 
@@ -205,101 +215,80 @@ test('anonymous atom', () => {
   })
 })
 
-test.skip('anonymous atom with the name specified in middleware')
+test('.with() get middleware', () => {
+  const plusOne = <T extends Atom<any>>(a: T) => {
+    const get = a.get
+    return Object.assign(a, {
+      get: () => {
+        return get() + 1
+      },
+    }) as T
+  }
 
-describe.skip('.with()', () => {
-  test('get middleware', () => {
-    const plusOne = <T extends Atom<any>>(a: T) => {
-      const get = a.get
-      return Object.assign(a, {
-        get: () => {
-          return get() + 1
-        },
-      }) as T
-    }
+  const $ = store(() => {
+    const a = atom(1).with(plusOne)
 
-    const $ = store(() => {
-      const a = atom(1).with(plusOne)
-
-      return { a }
-    })
-
-    expect($.a.get()).toBe(2)
+    return { a }
   })
-  test('set middleware', () => {
-    const append = <T extends Atom<string>>(a: T) => {
-      const set = a.set
-      return Object.assign(a, {
-        set: (value: any) => {
-          return set(a.get() + value)
-        },
-      }) as T
-    }
 
-    const $ = store(() => {
-      const a = atom('a').with(append)
+  expect($.a.get()).toBe(2)
+})
+test('.with() set middleware', () => {
+  const append = <T extends Atom<string>>(a: T) => {
+    const set = a.set
+    return Object.assign(a, {
+      set: (value: any) => {
+        return set(a.get() + value)
+      },
+    }) as T
+  }
 
-      return { a }
-    })
+  const $ = store(() => {
+    const a = atom('a').with(append)
 
-    assertWith<StoreInternals>($)
-
-    expect($.a.get()).toBe('a')
-
-    $.a.set('b')
-    $.getInternals().getStored().flush()
-
-    expect($.a.get()).toBe('ab')
+    return { a }
   })
-  test('chaining middleware', () => {
-    const append = <T extends Atom<string>>(a: T) => {
-      const set = a.set
-      return Object.assign(a, {
-        set: (value: any) => {
-          return set(a.get() + value)
-        },
-      }) as T
-    }
 
-    const repeat = <T extends Atom<string>>(a: T) => {
-      const set = a.set
-      return Object.assign(a, {
-        set: (value: any) => {
-          return set(value + value)
-        },
-      }) as T
-    }
+  assertWith<StoreInternals>($)
 
-    const $ = store(() => {
-      const a = atom('a').with(append).with(repeat)
+  expect($.a.get()).toBe('a')
 
-      return { a }
-    })
+  $.a.set('b')
+  $.getInternals().getStored().flush()
 
-    assertWith<StoreInternals>($)
+  expect($.a.get()).toBe('ab')
+})
+test('.with() chaining middleware', () => {
+  const append = <T extends Atom<string>>(a: T) => {
+    const set = a.set
+    return Object.assign(a, {
+      set: (value: any) => {
+        return set(a.get() + value)
+      },
+    }) as T
+  }
 
-    expect($.a.get()).toBe('a')
+  const repeat = <T extends Atom<string>>(a: T) => {
+    const set = a.set
+    return Object.assign(a, {
+      set: (value: any) => {
+        return set(value + value)
+      },
+    }) as T
+  }
 
-    $.a.set('b')
-    $.getInternals().getStored().flush()
+  const $ = store(() => {
+    const a = atom('a').with(append).with(repeat)
 
-    expect($.a.get()).toBe('abb')
+    return { a }
   })
-  // TODO: this could be a good way to specify whether
-  // an optic uses get/set
-  test('remove method', () => {
-    const onlyGet = <T extends Atom<any>>(a: T) => {
-      // not actually removing the method, since currently
-      // that breaks some stuff
-      return a as Omit<T, 'set'>
-    }
 
-    const $ = store(() => {
-      const a = atom(1).with(onlyGet)
+  assertWith<StoreInternals>($)
 
-      return { a }
-    })
+  expect($.a.get()).toBe('a')
 
-    expectTypeOf($.a).not.toHaveProperty('set')
-  })
+  $.a.set('b')
+  $.getInternals().getStored().flush()
+
+  expect($.a.get()).toBe('abb')
 })

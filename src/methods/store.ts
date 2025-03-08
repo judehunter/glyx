@@ -2,7 +2,7 @@ import { assertWith } from '../../test/utils'
 import { setCurrentStore, unsetCurrentStore } from '../misc/currentStore'
 import { MakeInternals, makeInternals } from '../misc/makeInternals'
 import { pubsub } from '../misc/pubsub'
-import { Handles, setupGroup } from '../misc/setup'
+import { Handles } from '../misc/setup'
 import { makeKey } from '../misc/utils'
 import { Atom } from './atom'
 import { Group, group, GroupInternals } from './group'
@@ -16,9 +16,9 @@ export type StoreInternals = MakeInternals<
 >
 
 /**
- * Creates a store. Make sure that ALL atoms, selects, etc.
- * are returned from the callback. `watch` and `onInit` are exceptions
- * to this rule.
+ * Creates a store. All atom values are stored centrally in the store.
+ * Updates are fine-grained, i.e. isolated to the atom that was updated.
+ * Updates are batched within a synchronous task in the event loop.
  *
  * Usage:
  * ```ts
@@ -29,6 +29,23 @@ export type StoreInternals = MakeInternals<
  * $.a.get()
  * ```
  * See other methods for more usage examples.
+ *
+ * ---
+ *
+ * Primitives are internally assigned names corresponding to the
+ * key in the returned object literal. Not returning a primitive will make it anonymous,
+ * meaning it will be automatically assigned a serial name. You can specify
+ * a name for a primitive you don't want to return by using the `name` middleware.
+ * ```ts
+ * const $ = store(() => {
+ *   const a = atom(1).with(name('foo'))
+ *   const getA = () => a.get()
+ *   return { getA }
+ * })
+ * // can't access $.a nor $.foo
+ * $.getA() // 1
+ * // in devtools, the atom will be named 'foo'
+ * ```
  *
  * @param defFn define the store inside this callback, and return everything.
  * @returns the initialized store, ready to use.
