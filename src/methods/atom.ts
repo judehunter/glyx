@@ -141,8 +141,6 @@ const makeWith =
  * @param initialValue - The initial value of the atom.
  */
 export const atom = <TValue>(initialValue: TValue) => {
-  const store = getCurrentStore()
-
   const internals = makeInternals({
     type: 'atom',
     setup: (name: string) => {
@@ -151,13 +149,13 @@ export const atom = <TValue>(initialValue: TValue) => {
   })
 
   onInit(() => {
-    if (!(internals.getInternals() as any).name) {
-      internals.setPartialInternals({ name: pubsub.getAnonName() } as any)
+    const gotInternals = internals.getInternals() as any
+    const name = gotInternals.name ?? pubsub.getAnonName()
+    if (!gotInternals.name) {
+      internals.setPartialInternals({ name } as any)
     }
-    pubsub.setKeyInitialValue(
-      (internals.getInternals() as any).name,
-      initialValue,
-    )
+    pubsub.assertNameNotExists(name)
+    pubsub.setKeyInitialValue(name, initialValue)
   })
 
   const get = ((...pass: Parameters<ReturnType<typeof makeGet>>) =>

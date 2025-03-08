@@ -277,3 +277,20 @@ test('.with() chaining middleware', () => {
 
   expect($.a.get()).toBe('abb')
 })
+
+test('fails on duplicate name', () => {
+  store(() => {
+    const a = atom(1)
+
+    return { a }
+  })
+
+  const makeSecondStore = () =>
+    store(() => {
+      const a = atom(1)
+
+      return { a }
+    })
+
+  expect(makeSecondStore).toThrow('Name $.a already exists')
+})

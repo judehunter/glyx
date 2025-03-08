@@ -95,6 +95,12 @@ const makePubsub = () => {
     applyPromise = undefined
   }
 
+  const assertNameNotExists = (name: string) => {
+    if (name in stored) {
+      throw new Error(`Name ${name} already exists`)
+    }
+  }
+
   let anonCounter = 0
   const getAnonName = () => `anon-${anonCounter++}`
 
@@ -111,6 +117,7 @@ const makePubsub = () => {
     flush,
     getAnonName,
     reset,
+    assertNameNotExists,
   }
 }
 

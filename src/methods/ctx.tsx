@@ -1,4 +1,10 @@
-import React, { Context, createContext, ReactNode, useContext } from 'react'
+import React, {
+  Context,
+  createContext,
+  ReactNode,
+  useContext,
+  useMemo,
+} from 'react'
 
 const useContextOrThrow = <T,>(context: Context<T>, name: string) => {
   const value = useContext(context)
@@ -15,7 +21,7 @@ export const ctx = <TProps, TDef>(def: (props: TProps) => TDef) => {
   const reactCtx = createContext<TDef | undefined>(undefined)
 
   const Provider = (props: TProps & { children: ReactNode }) => {
-    const calledDef = def(props)
+    const calledDef = useMemo(() => def(props), [])
 
     return (
       <reactCtx.Provider value={calledDef}>{props.children}</reactCtx.Provider>

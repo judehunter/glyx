@@ -47,7 +47,10 @@ export type StoreInternals = MakeInternals<
  * @param defFn define the store inside this callback, and return everything.
  * @returns the initialized store, ready to use.
  */
-export const store = <T extends Record<string, any>>(defFn: () => T) => {
+export const store = <T extends Record<string, any>>(
+  defFn: () => T,
+  name: string = '$',
+) => {
   const initSubbed = [] as (() => void)[]
   setCurrentStore({
     addOnInit: (fn) => {
@@ -61,7 +64,7 @@ export const store = <T extends Record<string, any>>(defFn: () => T) => {
   assertWith<GroupInternals>(defGroup)
 
   // todo: name
-  defGroup.getInternals().setup('$')
+  defGroup.getInternals().setup(name)
 
   for (const fn of initSubbed) {
     fn()
