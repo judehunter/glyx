@@ -1,5 +1,5 @@
-import { pubsub } from './pubsub'
-import { makeKey } from './utils'
+import { pubsub } from '../misc/pubsub'
+import { makeKey } from '../misc/utils'
 
 export const store = <T extends Record<string, any>>(defFn: () => T) => {
   const def = defFn()

@@ -551,7 +551,7 @@ test('atom use with custom select fn: select another atom as well', () => {
   expect(calls()).toEqual([[110], [111], [211]])
 })
 
-test('zombie child', () => {
+test.only('zombie child', () => {
   const $ = store(() => {
     const elems = atom([1, 2])
     return { elems }

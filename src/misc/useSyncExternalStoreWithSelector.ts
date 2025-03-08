@@ -43,7 +43,6 @@ export function useSyncExternalStoreWithSelector<Snapshot, Selection>(
   }
 
   const [getSelection, getServerSelection] = useMemo(() => {
-    console.log('creating new memoized selector')
     // Track the memoized state using closure variables that are local to this
     // memoized instance of a getSnapshot function. Intentionally not using a
     // useRef hook, because that state would be shared across all concurrent

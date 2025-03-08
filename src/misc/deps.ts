@@ -19,7 +19,9 @@ export const callAndTrackDeps = (
       DEPS_LIST = []
       isTrackingDepsNow = true
     } else if (errorOnAlreadyTrackingDeps) {
-      throw new Error('Already tracking deps on another function')
+      throw new Error(
+        'Already tracking deps on another function. You found a bug in Glyx.',
+      )
     }
   }
 
