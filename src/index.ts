@@ -18,7 +18,7 @@ pick, use, etc. on group
 
 X nested over atom
 
-middleware
+X middleware
 devtools
 X persistence
 immer
@@ -33,7 +33,7 @@ X cleanup of errors in selectors in respect to deps (must be resilient)
 
 store context and global version
 
-object atom that creates atoms for each key to isolate updates
+WIP object atom that creates atoms for each key to isolate updates
 
 slice method that is just a group that unwraps?
 
@@ -42,7 +42,7 @@ X derived atoms
 
 prevent atoms from being returned in nested
 
-derived atoms should only save themselves to deps, and not the underlying atoms they derive from, to preserve fine-grained reactivity
+X derived atoms should only save themselves to deps, and not the underlying atoms they derive from, to preserve fine-grained reactivity
 
 make sub return the whole state
 
@@ -55,6 +55,7 @@ add onInit to all atoms, selects, etc. that checks if they have been initialized
 remove values from pending updates that are identical? what about eqfn?
 
 function to wrap dependencies that should not be tracked (akin to solid)
+- not that important since the value can be retrieved outside of a selector and then used inside
 
 group set
 
@@ -65,6 +66,8 @@ wait for commit fn that doesn't force commit like flush and returns a promise
 flush directly after store is inited?
 
 nested should just be a middleware?
+
+error if creating an atom with a name that is already in use
 */
 
 /*
@@ -72,7 +75,7 @@ note in readme:
 
 no zombie child problem
 no need to repeat functions for hook and non-hook versions
-changes in one atom notify only relevant subscribers, so you cn put everything in one store
+changes in one atom notify only relevant subscribers, so you can put everything in one store
 supposed to keep global stuff in one store and then smaller stores for context stuff
 fine-grained reactivity
 */

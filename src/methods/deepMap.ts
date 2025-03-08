@@ -110,6 +110,8 @@ type CollectPaths<T, Prefix extends string = ''> = T extends object
     }[keyof T]
   : never
 
+type C = CollectPaths<{foo: {bar: 1} | {buzz: 2}}>
+
 type DistributiveKeyOf<T> = T extends any ? keyof T : never
 
 type FieldTypeAtPath<

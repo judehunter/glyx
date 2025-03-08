@@ -1,6 +1,9 @@
+import { useState } from 'react'
+import { useEffect } from 'react'
 import { pick } from '../middleware/pick'
 import { atom } from './atom'
 import { nested } from './nested'
+import { useStableFn } from '../misc/useStableFn'
 
 export const event = <TProps = void>() => {
   const eventAtom = atom<{ idx: number; props: TProps }>({
@@ -9,7 +12,7 @@ export const event = <TProps = void>() => {
   })
 
   const on = (fn: (props: TProps) => void) => {
-    eventAtom.sub(() => {
+    return eventAtom.sub(() => {
       fn(eventAtom.get().props)
     })
   }
@@ -21,8 +24,17 @@ export const event = <TProps = void>() => {
     })
   }
 
+  const useOn = (fn: (props: TProps) => void) => {
+    const stabilized = useStableFn(fn)
+
+    useEffect(() => {
+      return on(stabilized)
+    }, [])
+  }
+
   return nested(eventAtom, () => ({
     on,
+    useOn,
     emit,
   }))
 }
