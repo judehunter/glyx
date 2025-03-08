@@ -1,9 +1,11 @@
 export const pubsub = () => {
-  const stored = {} as Record<string, any>
+  let stored = {} as Record<string, any>
   const listeners = {} as Record<string, ((value: any) => void)[]>
 
   const set = (key: string, value: any) => {
-    stored[key] = value
+    // replace the stored object so that the reference changes.
+    // this is primarily used for useSyncExternalStoreWithSelector behavior.
+    stored = { ...stored, [key]: value }
 
     if (listeners[key]) {
       for (const listener of listeners[key]) {

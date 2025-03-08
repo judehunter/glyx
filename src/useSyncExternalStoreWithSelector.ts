@@ -1,8 +1,10 @@
-import React, { useSyncExternalStore } from 'react'
-
-// Intentionally not using named imports because Rollup uses dynamic dispatch
-// for CommonJS interop.
-const { useRef, useEffect, useMemo, useDebugValue } = React
+import React, {
+  useSyncExternalStore,
+  useRef,
+  useEffect,
+  useMemo,
+  useDebugValue,
+} from 'react'
 
 // Same as useSyncExternalStore, but supports selector and isEqual arguments.
 export function useSyncExternalStoreWithSelector<Snapshot, Selection>(
@@ -36,6 +38,7 @@ export function useSyncExternalStoreWithSelector<Snapshot, Selection>(
   }
 
   const [getSelection, getServerSelection] = useMemo(() => {
+    console.log('creating new memoized selector')
     // Track the memoized state using closure variables that are local to this
     // memoized instance of a getSnapshot function. Intentionally not using a
     // useRef hook, because that state would be shared across all concurrent
@@ -95,11 +98,14 @@ export function useSyncExternalStoreWithSelector<Snapshot, Selection>(
     // Assigning this to a constant so that Flow knows it can't change.
     const maybeGetServerSnapshot =
       getServerSnapshot === undefined ? null : getServerSnapshot
+
     const getSnapshotWithSelector = () => memoizedSelector(getSnapshot())
+
     const getServerSnapshotWithSelector =
       maybeGetServerSnapshot === null
         ? undefined
         : () => memoizedSelector(maybeGetServerSnapshot())
+
     return [getSnapshotWithSelector, getServerSnapshotWithSelector]
   }, [getSnapshot, getServerSnapshot, selector, isEqual])
 
@@ -114,6 +120,5 @@ export function useSyncExternalStoreWithSelector<Snapshot, Selection>(
     inst.value = value
   }, [value])
 
-  useDebugValue(value)
   return value
 }

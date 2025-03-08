@@ -480,12 +480,14 @@ test('select use with custom select fn: select another atom as well', () => {
   expect(calls()).toEqual([[120]])
 
   act(() => {
+    console.log('---')
     $.a.set(11)
   })
 
   expect(calls()).toEqual([[120], [122]])
 
   act(() => {
+    console.log('---')
     $.b.set(200)
   })
 
@@ -501,6 +503,8 @@ test('atom get with custom select fn', () => {
 
   expect($.a.get((x) => x + 5)).toBe(15)
 })
+
+test('select get with custom select fn: select another atom as well')
 
 test('atom use with custom select fn', () => {
   const $ = store(() => {
@@ -520,27 +524,31 @@ test('atom use with custom select fn', () => {
   expect(calls()).toEqual([[15], [16]])
 })
 
-test.only('useSyncExternalStore', () => {
+test('atom use with custom select fn: select another atom as well', () => {
   const $ = store(() => {
-    const a = atom(1)
-    return { a }
+    const a = atom(10)
+    const b = atom(100)
+
+    return { a, b }
   })
 
-  let set
-  const calls = makeHookCallSpy(() => {
-    console.log('hook')
-    const [state, setState] = useState(0)
-    set = setState
-    $.a.use((x) => {
-      console.log('selector', x)
-      return x * 2
-    })
-  })
+  const calls = makeHookCallSpy(() => $.a.use((x) => x + $.b.get()))
+
+  expect(calls()).toEqual([[110]])
 
   act(() => {
     console.log('---')
-    set(10)
+    $.a.set(11)
   })
+
+  expect(calls()).toEqual([[110], [111]])
+
+  act(() => {
+    console.log('---')
+    $.b.set(200)
+  })
+
+  expect(calls()).toEqual([[110], [111], [211]])
 })
 
 test('zombie child', () => {
@@ -581,4 +589,6 @@ test('zombie child', () => {
 test('select with custom select tracks deps of both independently')
 test('updates are batched')
 test('component unsubscribes')
+test('no infinite loop')
+test('custom selector as a closure (uses state from the component)')
 // todo: .use on a group(), pick, etc.

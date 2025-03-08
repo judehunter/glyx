@@ -14,3 +14,5 @@ export const attachObjToFn = <
 export const uniqueDeps = (a: string[], b: string[]) => {
   return [...new Set([...a, ...b])]
 }
+
+export const identity = <T>(x: T) => x
