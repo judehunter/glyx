@@ -111,7 +111,47 @@ test('no infinite loop with custom selector that returns an unstable reference',
   expect(calls2()).toEqual([[{ x: 2 }], [{ x: 3 }]])
 })
 
-test('updates are batched')
-test('component unsubscribes')
-test('custom selector as a closure (uses state from the component)')
-// todo: .use on a group(), pick, etc.
+test('component unsubscribes', () => {
+  const $ = store(() => {
+    const a = atom(1)
+    const b = select(() => a.get() + 1)
+    return { a, b }
+  })
+
+  const Comp = () => {
+    $.a.use()
+    $.b().use()
+    return null
+  }
+
+  const { unmount } = render(<Comp />)
+
+  expect($._glyxTest().stored.getListeners().a).toHaveLength(2)
+
+  unmount()
+
+  expect($._glyxTest().stored.getListeners().a).toHaveLength(0)
+})
+
+// this is handled by React, not Glyx
+test('updates are batched', () => {
+  const $ = store(() => {
+    const a = atom(1)
+    const b = atom(2)
+    const c = select(() => a.get() + b.get())
+    return { a, b, c }
+  })
+
+  const calls = makeHookCallSpy(() => $.c().use())
+
+  expect(calls()).toEqual([[3]])
+
+  act(() => {
+    $.a.set(3)
+    $.b.set(4)
+  })
+
+  expect(calls()).toEqual([[3], [7]])
+})
+
+// todo: select selector gets another select selector and tracks deps correctly (should work already since only the first select will start tracking deps at that point)

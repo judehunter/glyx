@@ -38,5 +38,7 @@ export const pubsub = () => {
     }
   }
 
-  return { set, get, getAll, has, sub }
+  const getListeners = () => listeners
+
+  return { set, get, getAll, has, sub, getListeners }
 }

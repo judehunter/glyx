@@ -4,7 +4,34 @@ import { runCustomSelector } from '../misc/runCustomSelector'
 import { useSyncExternalStoreWithSelector } from '../misc/useSyncExternalStoreWithSelector'
 import { identity, uniqueDeps } from '../misc/utils'
 
-const makeGet = (target: any) => (customSelector?: (...args: any[]) => any) => {
+export type Atom<TValue = unknown> = {
+  get<TCustomSelected = TValue>(
+    customSelector?: (value: TValue) => TCustomSelected,
+  ): TCustomSelected
+  use<TCustomSelected = TValue>(
+    customSelector?: (value: TValue) => TCustomSelected,
+  ): TCustomSelected
+  sub(listener: (value: TValue) => void): () => void
+  set(value: TValue): void
+
+  _glyx: {
+    type: 'atom'
+    initialValue: TValue
+
+    // supplied by store:
+    name: string
+    get(): TValue
+    getAll(): Record<string, unknown>
+    sub(listener: (value: TValue) => void): () => void
+    subWithDeps: (
+      deps: string[],
+      listener: (value: unknown) => void,
+    ) => () => void
+    set(value: TValue): void
+  }
+}
+
+const makeGet = (target: Atom) => (customSelector?: (value: any) => any) => {
   pushToDepsListIfTracking(target._glyx.name)
 
   const value = (customSelector ?? identity)(target._glyx.get())
@@ -12,9 +39,9 @@ const makeGet = (target: any) => (customSelector?: (...args: any[]) => any) => {
 }
 
 const makeUse =
-  (target: any) =>
+  (target: Atom) =>
   (
-    customSelector?: (...args: any[]) => any,
+    customSelector?: (value: any) => any,
     eqFn?: (a: any, b: any) => boolean,
   ) => {
     const customSelectorDepsRef = useRef<undefined | string[]>(undefined)
@@ -51,17 +78,17 @@ const makeUse =
     )
   }
 
-const makeSub = (target: any) => () => {
+const makeSub = (target: Atom) => () => {
   throw new Error('sub is not implemented for atom')
 }
 
-const makeSet = (target: any) => (value: any) => {
+const makeSet = (target: Atom) => (value: any) => {
   target._glyx.set(value)
 }
 
-export const atom = (initialValue: any) => {
+export const atom = <TValue>(initialValue: TValue) => {
   const target = {
-    _glyx: { type: 'atom', initialValue },
+    _glyx: { type: 'atom', initialValue } as Atom<TValue>['_glyx'],
 
     get: (...pass: Parameters<ReturnType<typeof makeGet>>) =>
       makeGet(target)(...pass),
@@ -74,7 +101,7 @@ export const atom = (initialValue: any) => {
 
     set: (...pass: Parameters<ReturnType<typeof makeSet>>) =>
       makeSet(target)(...pass),
-  }
+  } satisfies Atom<TValue>
 
-  return target
+  return target as Atom<TValue>
 }

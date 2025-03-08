@@ -4,8 +4,34 @@ import { runCustomSelector } from '../misc/runCustomSelector'
 import { useSyncExternalStoreWithSelector } from '../misc/useSyncExternalStoreWithSelector'
 import { attachObjToFn, identity, uniqueDeps } from '../misc/utils'
 
+export type CalledSelect<TSelected = unknown> = {
+  get<TCustomSelected = TSelected>(
+    customSelector?: (value: TSelected) => TCustomSelected,
+  ): TCustomSelected
+  use<TCustomSelected = TSelected>(
+    customSelector?: (value: TSelected) => TCustomSelected,
+  ): TCustomSelected
+  sub(listener: (value: TSelected) => void): () => void
+}
+
+export type Select<TSelector extends (...args: any[]) => any = any> = ((
+  ...args: Parameters<TSelector>
+) => CalledSelect<ReturnType<TSelector>>) & {
+  _glyx: {
+    type: 'select'
+    depsList: undefined | string[]
+    // supplied by store:
+    name: string // note: name is not actually used for anything yet
+    getAll(): Record<string, unknown>
+    subWithDeps: (
+      deps: string[],
+      listener: (value: unknown) => void,
+    ) => () => void
+  }
+}
+
 const makeGet =
-  (target: any, args: any[], selector: (...args: any[]) => any) =>
+  (target: Select, args: any[], selector: (...args: any[]) => any) =>
   (customSelector?: (...args: any[]) => any) => {
     const { value: selectedValue, depsList } = callAndTrackDeps(
       { trackDeps: !target._glyx.depsList },
@@ -20,17 +46,21 @@ const makeGet =
   }
 
 const makeUse =
-  (target: any, args: any[]) =>
+  (target: Select, args: any[]) =>
   (
     customSelector?: (...args: any[]) => any,
     eqFn?: (a: any, b: any) => boolean,
   ) => {
+    // console.log(target, args, customSelector, eqFn)
     const customSelectorDepsRef = useRef<undefined | string[]>(undefined)
 
     const subscribe = useMemo(
       () => (listener) => {
         if (!customSelectorDepsRef.current) {
           throw new Error('customSelectorDepsRef.current is undefined')
+        }
+        if (!target._glyx.depsList) {
+          throw new Error('depsList is undefined')
         }
 
         return target._glyx.subWithDeps(
@@ -69,7 +99,9 @@ const makeSub =
     throw new Error('sub is not implemented for select')
   }
 
-export const select = (selector: (...args: any[]) => any) => {
+export const select = <TSelector extends (...args: any[]) => any>(
+  selector: TSelector,
+) => {
   const target = attachObjToFn(
     (...args: any[]) => {
       return {
@@ -86,10 +118,9 @@ export const select = (selector: (...args: any[]) => any) => {
     {
       _glyx: {
         type: 'select',
-        depsList: undefined as undefined | string[],
-      },
+      } as Select['_glyx'],
     },
-  )
+  ) satisfies Select<TSelector>
 
-  return target
+  return target as Select<TSelector>
 }
