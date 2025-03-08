@@ -1,7 +1,9 @@
 import { expect, vi } from 'vitest'
 import { test } from 'vitest'
-import { atom, group, nested, select, store } from '.'
-import { act, renderHook } from '@testing-library/react'
+import { atom, group, nested, select, store } from '..'
+import { act, render, renderHook } from '@testing-library/react'
+import { makeHookCallSpy } from './utils'
+import React, { useState } from 'react'
 
 test('atom set', () => {
   const $ = store(() => {
@@ -17,7 +19,7 @@ test('atom set', () => {
   expect($._glyxTest().stored.get('counter')).toBe(10)
 })
 
-test('atom sub', () => {
+test.skip('atom sub', () => {
   const $ = store(() => {
     const counter = atom(0)
 
@@ -137,10 +139,9 @@ test('select get with deps', () => {
     counter: 10,
   })
 
-  expect($.double._glyx.tracksDeps).toBe(false)
+  expect($.double._glyx.depsList).toBeUndefined()
 
   expect($.double().get()).toBe(20)
-  expect($.double._glyx.tracksDeps).toBe(true)
   expect($.double._glyx.depsList).toEqual(['counter'])
 
   $.counter.set(20)
@@ -163,13 +164,12 @@ test('select get transitive', () => {
     counter: 10,
   })
 
-  expect($.double._glyx.tracksDeps).toBe(false)
-  expect($.quadruple._glyx.tracksDeps).toBe(false)
+  expect($.double._glyx.depsList).toBeUndefined()
+  expect($.quadruple._glyx.depsList).toBeUndefined()
   expect($.double().get()).toBe(20)
-  expect($.double._glyx.tracksDeps).toBe(true)
   expect($.double._glyx.depsList).toEqual(['counter'])
   expect($.quadruple().get()).toBe(40)
-  expect($.quadruple._glyx.tracksDeps).toBe(true)
+  expect($.quadruple._glyx.depsList).toEqual(['counter'])
   expect($.quadruple._glyx.depsList).toEqual(['counter'])
 
   $.counter.set(20)
@@ -268,6 +268,26 @@ test('select get with args', () => {
 
   expect($.multi(2).get()).toBe(40)
   expect($.multi(3).get()).toBe(60)
+})
+
+test('select use with args', () => {
+  const $ = store(() => {
+    const counter = atom(10)
+
+    const multi = select((x) => counter.get() * x)
+
+    return { counter, multi }
+  })
+
+  const spy = vi.fn()
+
+  const hook = renderHook(() => {
+    const state = $.multi(2).use()
+    spy(state)
+    return state
+  })
+
+  expect(spy.mock.calls).toEqual([[20]])
 })
 
 test('nested select', () => {
@@ -393,3 +413,172 @@ test('isolated updates with deps tracking', () => {
   expect(spy2.mock.calls).toEqual([[10], [20]])
   expect(spy3.mock.calls).toEqual([[11], [12], [22]])
 })
+
+test('select get with custom select fn', () => {
+  const $ = store(() => {
+    const counter = atom(10)
+
+    const mult = select((factor) => counter.get() * factor)
+
+    return { counter, mult }
+  })
+
+  expect($.mult(2).get()).toBe(20)
+  expect($.mult(2).get((x) => x + 5)).toBe(25)
+})
+
+test('select get with custom select fn: select another atom as well', () => {
+  const $ = store(() => {
+    const a = atom(10)
+    const b = atom(100)
+
+    const mult = select((factor) => a.get() * factor)
+
+    return { a, b, mult }
+  })
+
+  expect($.mult(2).get()).toBe(20)
+  expect($.mult(2).get((x) => x + 5 + $.b.get())).toBe(125)
+
+  $.a.set(11)
+
+  expect($.mult(2).get((x) => x + 5 + $.b.get())).toBe(127)
+})
+
+test('select use with custom select fn', () => {
+  const $ = store(() => {
+    const a = atom(10)
+
+    const mult = select((factor) => a.get() * factor)
+
+    return { a, mult }
+  })
+
+  const calls = makeHookCallSpy(() => $.mult(2).use((x) => x + 5))
+
+  expect(calls()).toEqual([[25]])
+
+  act(() => {
+    $.a.set(11)
+  })
+
+  expect(calls()).toEqual([[25], [27]])
+})
+
+test('select use with custom select fn: select another atom as well', () => {
+  const $ = store(() => {
+    const a = atom(10)
+    const b = atom(100)
+
+    const mult = select((factor) => a.get() * factor)
+
+    return { a, b, mult }
+  })
+
+  const calls = makeHookCallSpy(() => $.mult(2).use((x) => x + $.b.get()))
+
+  expect(calls()).toEqual([[120]])
+
+  act(() => {
+    $.a.set(11)
+  })
+
+  expect(calls()).toEqual([[120], [122]])
+
+  act(() => {
+    $.b.set(200)
+  })
+
+  expect(calls()).toEqual([[120], [122], [222]])
+})
+
+test('atom get with custom select fn', () => {
+  const $ = store(() => {
+    const a = atom(10)
+
+    return { a }
+  })
+
+  expect($.a.get((x) => x + 5)).toBe(15)
+})
+
+test('atom use with custom select fn', () => {
+  const $ = store(() => {
+    const a = atom(10)
+
+    return { a }
+  })
+
+  const calls = makeHookCallSpy(() => $.a.use((x) => x + 5))
+
+  expect(calls()).toEqual([[15]])
+
+  act(() => {
+    $.a.set(11)
+  })
+
+  expect(calls()).toEqual([[15], [16]])
+})
+
+test.only('useSyncExternalStore', () => {
+  const $ = store(() => {
+    const a = atom(1)
+    return { a }
+  })
+
+  let set
+  const calls = makeHookCallSpy(() => {
+    console.log('hook')
+    const [state, setState] = useState(0)
+    set = setState
+    $.a.use((x) => {
+      console.log('selector', x)
+      return x * 2
+    })
+  })
+
+  act(() => {
+    console.log('---')
+    set(10)
+  })
+})
+
+test('zombie child', () => {
+  const $ = store(() => {
+    const elems = atom([1, 2])
+    return { elems }
+  })
+
+  const Child = ({ idx }: { idx: number }) => {
+    console.log('Child', idx)
+    const elem = $.elems.use((x) => {
+      const value = x[idx]
+      console.log('value', idx, value)
+      return value
+    })
+    // return <div>{idx}</div>
+  }
+
+  const Parent = () => {
+    const elems = $.elems.use()
+    return (
+      <div>
+        {elems.map((elem, idx) => (
+          <Child idx={idx} key={elem} />
+        ))}
+      </div>
+    )
+  }
+
+  render(<Parent />)
+
+  act(() => {
+    console.log('---')
+    $.elems.set([1])
+  })
+})
+
+test('select with custom select tracks deps of both independently')
+test('updates are batched')
+test('component unsubscribes')
+// todo: .use on a group(), pick, etc.

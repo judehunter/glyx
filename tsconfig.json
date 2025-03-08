@@ -12,6 +12,7 @@
     "noImplicitAny": false,
     "allowSyntheticDefaultImports": true,
     "declaration": true,
+    "jsx": "preserve",
     "outDir": "./dist"
   },
   "include": ["src", "vitest.config.js"]

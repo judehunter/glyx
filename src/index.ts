@@ -1,9 +1,12 @@
-import { useMemo, useSyncExternalStore } from 'react'
-import { attachObjToFn } from './utils'
+import { useMemo, useRef, useSyncExternalStore } from 'react'
+import { attachObjToFn, uniqueDeps } from './utils'
 import { pubsub } from './pubsub'
-
-let trackingDeps = false
-let depsList: string[] = []
+import {
+  callAndTrackDeps,
+  DEPS_LIST,
+  pushToDepsListIfTracking,
+  TRACKING_DEPS,
+} from './deps'
 
 // let GET_DEPS_CB = { current: null as null | (() => void) }
 
@@ -16,19 +19,78 @@ export const group = (defFn: () => Record<string, any>) => {
 export const atom = (initialValue: any) => {
   const target = {
     _glyx: { type: 'atom', initialValue },
-    get: () => {
-      if (trackingDeps) {
-        depsList.push(target._glyx.name)
-      }
-      const value = target._glyx.get()
-      return value ? value.value : target._glyx.initialValue
+    get: (customSelector?: (...args: any[]) => any) => {
+      pushToDepsListIfTracking(target._glyx.name)
+
+      const customSelectorOrNoop = customSelector ?? ((x) => x)
+
+      const value = customSelectorOrNoop(target._glyx.get())
+      return value
     },
-    use: () => {
-      return useSyncExternalStore(target._glyx.sub, target.get)
+    use: (customSelector?: (...args: any[]) => any) => {
+      const customSelectorDepsRef = useRef<undefined | string[]>(undefined)
+
+      const subscribe = useMemo(
+        () => (listener) => {
+          console.log('subscribe')
+          if (!customSelectorDepsRef.current) {
+            throw new Error('customSelectorDepsRef.current is undefined')
+          }
+          return target._glyx.subWithDeps(
+            uniqueDeps([target._glyx.name], customSelectorDepsRef.current),
+            (...args) => {
+              console.log('s', ...args)
+              listener(...args)
+            },
+          )
+        },
+        [],
+      )
+
+      return useSyncExternalStore(subscribe, () => {
+        console.log('getSnapshot ->')
+        const value = target.get()
+
+        let valueFromCustomSelector: typeof value
+
+        if (!customSelectorDepsRef.current) {
+          if (!customSelector) {
+            customSelectorDepsRef.current = []
+          } else {
+            console.log('custom selector deps ->')
+            const { value: valueFromTracking, depsList } = callAndTrackDeps(
+              {
+                trackDeps: true,
+                // if the deps can't be tracked, then everything falls apart,
+                // since the subscriber won't fire
+                errorOnAlreadyTrackingDeps: true,
+              },
+              () => customSelector(value),
+            )
+            console.log('custom selector deps <-', depsList, valueFromTracking)
+            customSelectorDepsRef.current = depsList
+            valueFromCustomSelector = valueFromTracking
+          }
+        }
+
+        if (valueFromCustomSelector === undefined) {
+          if (customSelector) {
+            console.log('custom selector ->')
+            valueFromCustomSelector = customSelector(value)
+            console.log('custom selector <-')
+          } else {
+            valueFromCustomSelector = value
+          }
+        }
+
+        console.log('getSnapshot <-\n')
+
+        return valueFromCustomSelector
+      })
     },
-    sub: (...args) => {
-      return target._glyx.sub(...args)
-    },
+    // sub: () => {
+    //   return target._glyx.sub()
+    // },
     set: (value: any) => {
       target._glyx.set(value)
     },
@@ -37,44 +99,84 @@ export const atom = (initialValue: any) => {
   return target
 }
 
-export const select = (selectFn: (...args: any[]) => any) => {
+export const select = (selector: (...args: any[]) => any) => {
   const target = attachObjToFn(
     (...args: any[]) => {
       return {
-        get: () => {
-          let isTrackingDepsNow = false
-          if (!target._glyx.tracksDeps && !trackingDeps) {
-            trackingDeps = true
-            depsList = []
-            isTrackingDepsNow = true
-          }
+        get: (customSelector?: (...args: any[]) => any) => {
+          const { value, depsList } = callAndTrackDeps(
+            { trackDeps: !target._glyx.depsList },
+            () => selector(...args),
+          )
+          target._glyx.depsList ??= depsList
+
+          const customSelectorOrNoop = customSelector
+            ? (x) => select(customSelector)(x).get()
+            : (x) => x
 
           // todo: add error handling and cleanup of deps on error
-          const value = selectFn(...args)
+          const valueFromCustomSelect = customSelectorOrNoop(value)
 
-          if (isTrackingDepsNow) {
-            target._glyx.tracksDeps = true
-            target._glyx.depsList = [...depsList]
-            depsList = []
-            trackingDeps = false
-          }
-
-          return value
+          return valueFromCustomSelect
         },
-        use: (...args) => {
-          if (!target._glyx.tracksDeps) {
-            target(...args).get()
-          }
+        use: (customSelector?: (...args: any[]) => any) => {
+          const customSelectorDepsRef = useRef<undefined | string[]>(undefined)
+
           const subscribe = useMemo(
-            () => (listener) =>
-              target._glyx.subWithDeps(target._glyx.depsList, (val) => {
-                listener(selectFn(...args))
-              }),
+            () => (listener) => {
+              if (!customSelectorDepsRef.current) {
+                throw new Error('customSelectorDepsRef.current is undefined')
+              }
+
+              return target._glyx.subWithDeps(
+                uniqueDeps(
+                  target._glyx.depsList,
+                  customSelectorDepsRef.current,
+                ),
+                listener,
+              )
+            },
             [],
           )
-          return useSyncExternalStore(subscribe, () => target(...args).get())
+          return useSyncExternalStore(subscribe, () => {
+            const value = target(...args).get()
+
+            let valueFromCustomSelector: typeof value
+
+            if (!customSelectorDepsRef.current) {
+              if (!customSelector) {
+                customSelectorDepsRef.current = []
+              } else {
+                const { value: valueFromTracking, depsList } = callAndTrackDeps(
+                  {
+                    trackDeps: true,
+                    // if the deps can't be tracked, then everything falls apart,
+                    // since the subscriber won't fire
+                    errorOnAlreadyTrackingDeps: true,
+                  },
+                  () => customSelector(value),
+                )
+                customSelectorDepsRef.current = depsList
+                valueFromCustomSelector = valueFromTracking
+              }
+            }
+
+            if (!valueFromCustomSelector) {
+              if (customSelector) {
+                valueFromCustomSelector = customSelector(value)
+              } else {
+                valueFromCustomSelector = value
+              }
+            }
+
+            return valueFromCustomSelector
+          })
         },
-        sub: (...args) => {
+        // TODO: custom select fn
+        sub: () => {
+          if (!target._glyx.depsList) {
+            target(...args).get()
+          }
           return target._glyx.subWithDeps(...args)
         },
       }
@@ -82,19 +184,13 @@ export const select = (selectFn: (...args: any[]) => any) => {
     {
       _glyx: {
         type: 'select',
-        tracksDeps: false,
+        depsList: undefined as undefined | string[],
       },
     },
   )
 
   return target
 }
-
-// const preselectedSelect = (selectObj: ReturnType<typeof select>, args) => {
-//   return attachObjToFn(() => selectObj(...args), {
-//     _glyx: selectObj._glyx,
-//   })
-// }
 
 export const nested = (
   selectObj: ReturnType<typeof select>,
@@ -123,8 +219,9 @@ export const store = <T extends Record<string, any>>(defFn: () => T) => {
 
     target._glyx = {
       ...target._glyx,
-      get: () => (stored.has(key) ? { value: stored.get(key) } : null),
+      get: () => stored.get(key),
       sub: (listener) => stored.sub([key], listener),
+      subWithDeps: stored.sub,
       set: (value: any) => stored.set(key, value),
       name: key,
     }

@@ -10,3 +10,7 @@ export const attachObjToFn = <
   }
   return fn as TFn & TObj
 }
+
+export const uniqueDeps = (a: string[], b: string[]) => {
+  return [...new Set([...a, ...b])]
+}
