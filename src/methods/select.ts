@@ -20,7 +20,7 @@ const makeGet =
   }
 
 const makeUse =
-  (target: any, args: any[], selector: (...args: any[]) => any) =>
+  (target: any, args: any[]) =>
   (
     customSelector?: (...args: any[]) => any,
     eqFn?: (a: any, b: any) => boolean,
@@ -77,7 +77,7 @@ export const select = (selector: (...args: any[]) => any) => {
           makeGet(target, args, selector)(...pass),
 
         use: (...pass: Parameters<ReturnType<typeof makeUse>>) =>
-          makeUse(target, args, selector)(...pass),
+          makeUse(target, args)(...pass),
 
         sub: (...pass: Parameters<ReturnType<typeof makeSub>>) =>
           makeSub(target, args, selector)(...pass),

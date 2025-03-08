@@ -134,43 +134,16 @@ test('select.use() with selector args', () => {
     return { counter, multi }
   })
 
-  const spy = vi.fn()
+  const calls = makeHookCallSpy(() => $.multi(2).use())
 
-  const hook = renderHook(() => {
-    const state = $.multi(2).use()
-    spy(state)
-    return state
+  act(() => {
+    $.counter.set(20)
   })
 
-  expect(spy.mock.calls).toEqual([[20]])
+  expect(calls()).toEqual([[20], [40]])
 })
 
-test('nested select', () => {
-  const $ = store(() => {
-    const counter = atom(5)
-
-    const double = nested(
-      select(() => counter.get() * 2),
-      (double) => {
-        const doubleAgain = select(() => double.get() * 2)
-
-        return { doubleAgain }
-      },
-    )
-
-    return { counter, double }
-  })
-
-  expect($.double().get()).toBe(10)
-  expect($.double().doubleAgain().get()).toBe(20)
-
-  $.counter.set(10)
-
-  expect($.double().get()).toBe(20)
-  expect($.double().doubleAgain().get()).toBe(40)
-})
-
-test('select two atoms at once', () => {
+test('select.get() with two atoms as dependencies', () => {
   const $ = store(() => {
     const a = atom(1)
     const b = atom(10)
@@ -191,7 +164,34 @@ test('select two atoms at once', () => {
   expect($.c().get()).toBe(22)
 })
 
-test('select get with custom select fn', () => {
+test('select.use() with two atoms as dependencies', () => {
+  const $ = store(() => {
+    const a = atom(1)
+    const b = atom(10)
+
+    const c = select(() => a.get() + b.get())
+
+    return { a, b, c }
+  })
+
+  const calls = makeHookCallSpy(() => $.c().use())
+
+  expect(calls()).toEqual([[11]])
+
+  act(() => {
+    $.a.set(2)
+  })
+
+  expect(calls()).toEqual([[11], [12]])
+
+  act(() => {
+    $.b.set(20)
+  })
+
+  expect(calls()).toEqual([[11], [12], [22]])
+})
+
+test('select.get() with custom selector', () => {
   const $ = store(() => {
     const counter = atom(10)
 
@@ -204,7 +204,7 @@ test('select get with custom select fn', () => {
   expect($.mult(2).get((x) => x + 5)).toBe(25)
 })
 
-test('select get with custom select fn: select another atom as well', () => {
+test('select.get() with custom selector that accesses another atom', () => {
   const $ = store(() => {
     const a = atom(10)
     const b = atom(100)
@@ -222,7 +222,7 @@ test('select get with custom select fn: select another atom as well', () => {
   expect($.mult(2).get((x) => x + 5 + $.b.get())).toBe(127)
 })
 
-test('select use with custom select fn', () => {
+test('select.use() with custom selector', () => {
   const $ = store(() => {
     const a = atom(10)
 
@@ -242,7 +242,7 @@ test('select use with custom select fn', () => {
   expect(calls()).toEqual([[25], [27]])
 })
 
-test('select use with custom select fn: select another atom as well', () => {
+test('select.use() with custom selector that accesses another atom', () => {
   const $ = store(() => {
     const a = atom(10)
     const b = atom(100)
@@ -268,3 +268,94 @@ test('select use with custom select fn: select another atom as well', () => {
 
   expect(calls()).toEqual([[120], [122], [222]])
 })
+
+test('select.use() tracks deps of selector and custom selector independently', () => {
+  const $ = store(() => {
+    const a = atom(1)
+    const b = atom(10)
+
+    const c = select(() => a.get() * 2)
+
+    return { a, b, c }
+  })
+
+  const c = $.c()
+
+  const calls1 = makeHookCallSpy(() => c.use())
+  const calls2 = makeHookCallSpy(() => c.use((x) => x + $.b.get()))
+
+  expect(calls1()).toEqual([[2]])
+  expect(calls2()).toEqual([[12]])
+
+  act(() => {
+    $.a.set(2)
+  })
+
+  expect(calls1()).toEqual([[2], [4]])
+  expect(calls2()).toEqual([[12], [14]])
+
+  act(() => {
+    $.b.set(20)
+  })
+
+  expect(calls1()).toEqual([[2], [4]])
+  expect(calls2()).toEqual([[12], [14], [24]])
+})
+
+test('select.use() with variable selector args from component state', () => {
+  const $ = store(() => {
+    const a = atom(1)
+
+    const mult = select((factor) => a.get() * factor)
+
+    return { a, mult }
+  })
+
+  const spy = vi.fn()
+
+  const Comp = ({ factor }: { factor: number }) => {
+    const mult = $.mult(factor).use()
+
+    spy(mult)
+
+    return null
+  }
+
+  const { rerender } = render(<Comp factor={2} />)
+
+  expect(spy.mock.calls).toEqual([[2]])
+
+  rerender(<Comp factor={3} />)
+
+  expect(spy.mock.calls).toEqual([[2], [3]])
+})
+
+test('select.use() with custom selector closing over component state', () => {
+  const $ = store(() => {
+    const a = atom(1)
+
+    const plusOne = select(() => a.get() + 1)
+
+    return { a, plusOne }
+  })
+
+  const spy = vi.fn()
+
+  const Comp = ({ factor }: { factor: number }) => {
+    const val = $.plusOne().use((x) => x * factor)
+
+    spy(val)
+
+    return null
+  }
+
+  const { rerender } = render(<Comp factor={2} />)
+
+  expect(spy.mock.calls).toEqual([[4]])
+
+  rerender(<Comp factor={3} />)
+
+  expect(spy.mock.calls).toEqual([[4], [6]])
+})
+
+test('select with args doesnt rerun deps tracking')

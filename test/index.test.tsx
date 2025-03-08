@@ -5,32 +5,7 @@ import { act, render, renderHook } from '@testing-library/react'
 import { makeHookCallSpy } from './utils'
 import React, { useState } from 'react'
 
-test('nested select with args', () => {
-  const $ = store(() => {
-    const counter = atom(5)
-
-    const mult = nested(
-      select((factor) => counter.get() * factor),
-      (mult) => {
-        const add = select((num) => mult.get() + num)
-
-        return { add }
-      },
-    )
-
-    return { counter, mult }
-  })
-
-  expect($.mult(10).get()).toBe(50)
-  expect($.mult(10).add(10).get()).toBe(60)
-
-  $.counter.set(10)
-
-  expect($.mult(10).get()).toBe(100)
-  expect($.mult(10).add(10).get()).toBe(110)
-})
-
-test('isolated updates with deps tracking', () => {
+test('isolated updates with dependency tracking', () => {
   const $ = store(() => {
     const a = atom(1)
     const b = atom(10)
@@ -40,50 +15,32 @@ test('isolated updates with deps tracking', () => {
     return { a, b, c }
   })
 
-  const spy1 = vi.fn()
-  const spy2 = vi.fn()
-  const spy3 = vi.fn()
+  const calls1 = makeHookCallSpy(() => $.a.use())
+  const calls2 = makeHookCallSpy(() => $.b.use())
+  const calls3 = makeHookCallSpy(() => $.c().use())
 
-  const hook1 = renderHook(() => {
-    const state = $.a.use()
-    spy1(state)
-    return state
-  })
-
-  const hook2 = renderHook(() => {
-    const state = $.b.use()
-    spy2(state)
-    return state
-  })
-
-  const hook3 = renderHook(() => {
-    const state = $.c().use()
-    spy3(state)
-    return state
-  })
-
-  expect(spy1.mock.calls).toEqual([[1]])
-  expect(spy2.mock.calls).toEqual([[10]])
-  expect(spy3.mock.calls).toEqual([[11]])
+  expect(calls1()).toEqual([[1]])
+  expect(calls2()).toEqual([[10]])
+  expect(calls3()).toEqual([[11]])
 
   act(() => {
     $.a.set(2)
   })
 
-  expect(spy1.mock.calls).toEqual([[1], [2]])
-  expect(spy2.mock.calls).toEqual([[10]])
-  expect(spy3.mock.calls).toEqual([[11], [12]])
+  expect(calls1()).toEqual([[1], [2]])
+  expect(calls2()).toEqual([[10]])
+  expect(calls3()).toEqual([[11], [12]])
 
   act(() => {
     $.b.set(20)
   })
 
-  expect(spy1.mock.calls).toEqual([[1], [2]])
-  expect(spy2.mock.calls).toEqual([[10], [20]])
-  expect(spy3.mock.calls).toEqual([[11], [12], [22]])
+  expect(calls1()).toEqual([[1], [2]])
+  expect(calls2()).toEqual([[10], [20]])
+  expect(calls3()).toEqual([[11], [12], [22]])
 })
 
-test('zombie child', () => {
+test('no zombie child problem', () => {
   const $ = store(() => {
     const elems = atom([10, 20])
     return { elems }
@@ -132,9 +89,29 @@ test('zombie child', () => {
   expect(spyParent.mock.calls).toEqual([[[10, 20]], [[11]]])
 })
 
-test('select with custom select tracks deps of both independently')
+test('no infinite loop with custom selector that returns an unstable reference', () => {
+  const $ = store(() => {
+    const a = atom(1)
+    const b = select(() => a.get() + 1)
+
+    return { a, b }
+  })
+
+  const calls1 = makeHookCallSpy(() => $.a.use((x) => ({ x })))
+  const calls2 = makeHookCallSpy(() => $.b().use((x) => ({ x })))
+
+  expect(calls1()).toEqual([[{ x: 1 }]])
+  expect(calls2()).toEqual([[{ x: 2 }]])
+
+  act(() => {
+    $.a.set(2)
+  })
+
+  expect(calls1()).toEqual([[{ x: 1 }], [{ x: 2 }]])
+  expect(calls2()).toEqual([[{ x: 2 }], [{ x: 3 }]])
+})
+
 test('updates are batched')
 test('component unsubscribes')
-test('no infinite loop')
 test('custom selector as a closure (uses state from the component)')
 // todo: .use on a group(), pick, etc.

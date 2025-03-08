@@ -1,8 +1,9 @@
 import { expect, vi } from 'vitest'
 import { test } from 'vitest'
 import { store, atom } from '../src/index'
-import { act, renderHook } from '@testing-library/react'
+import { act, render, renderHook } from '@testing-library/react'
 import { makeHookCallSpy } from './utils'
+import React from 'react'
 
 test('atom.get() of initial value', () => {
   const $ = store(() => {
@@ -131,4 +132,30 @@ test('atom.use() with custom selector that access another atom', () => {
   })
 
   expect(calls()).toEqual([[110], [111], [211]])
+})
+
+test('atom.use() with custom selector closing over component state', () => {
+  const $ = store(() => {
+    const a = atom(1)
+
+    return { a }
+  })
+
+  const spy = vi.fn()
+
+  const Comp = ({ factor }: { factor: number }) => {
+    const val = $.a.use((x) => x * factor)
+
+    spy(val)
+
+    return null
+  }
+
+  const { rerender } = render(<Comp factor={2} />)
+
+  expect(spy.mock.calls).toEqual([[2]])
+
+  rerender(<Comp factor={3} />)
+
+  expect(spy.mock.calls).toEqual([[2], [3]])
 })
