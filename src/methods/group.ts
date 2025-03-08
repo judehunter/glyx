@@ -1,8 +1,7 @@
-import { assertWith } from '../../test/utils'
 import { MakeInternals, makeInternals } from '../misc/makeInternals'
 import { makeKey } from '../misc/utils'
-import { atom, Atom, AtomInternals, AtomType } from './atom'
-import { CalledSelect, select, Select, SelectInternals } from './select'
+import { Atom } from './atom'
+import { CalledSelect, select } from './select'
 
 type MapDeep<T extends any> = {
   [K in keyof T as T[K] extends (...args: any[]) => any

@@ -1,4 +1,3 @@
-import { assertWith } from '../../test/utils'
 import { name } from '../middleware/name'
 import {
   getCurrentStore,
@@ -6,7 +5,7 @@ import {
   unsetCurrentStore,
 } from '../misc/currentStore'
 import { noTrack } from '../misc/deps'
-import { makeInternals } from '../misc/makeInternals'
+import { assertWith } from '../misc/utils'
 import { Atom, atom, AtomInternals } from './atom'
 import { nested } from './nested'
 import { CalledSelect, select } from './select'
@@ -110,7 +109,7 @@ type CollectPaths<T, Prefix extends string = ''> = T extends object
     }[keyof T]
   : never
 
-type C = CollectPaths<{foo: {bar: 1} | {buzz: 2}}>
+type C = CollectPaths<{ foo: { bar: 1 } | { buzz: 2 } }>
 
 type DistributiveKeyOf<T> = T extends any ? keyof T : never
 

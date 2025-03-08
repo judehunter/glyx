@@ -17,3 +17,5 @@ export const identity = <T>(x: T) => x
 export const makeKey = (groupKey: string | undefined, key: string) => {
   return groupKey ? `${groupKey}.${key}` : key
 }
+
+export function assertWith<TWith>(obj: any): asserts obj is TWith {}

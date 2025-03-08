@@ -1,7 +1,5 @@
 import { expect, test, vi } from 'vitest'
 import { store, atom, watch } from '../../src/index'
-import { StoreInternals } from '../../src/methods/store'
-import { assertWith } from '../utils'
 import { pubsub } from '../../src/misc/pubsub'
 
 test('watch callback fires once for multiple deps', () => {

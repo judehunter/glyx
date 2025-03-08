@@ -1,9 +1,7 @@
-import React from 'react'
 import { expect, test } from 'vitest'
 import { atom, ctx, store } from '../../src'
 import { render } from '@testing-library/react'
 import '@testing-library/jest-dom'
-import { pubsub } from '../../src/misc/pubsub'
 
 test('basic', async () => {
   const { $$canvas } = ctx(() =>

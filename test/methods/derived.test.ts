@@ -1,8 +1,7 @@
 import { expect, test, vi } from 'vitest'
 import { atom, derived, select, store } from '../../src/index'
-import { assertWith, makeHookCallSpy } from '../utils'
+import { makeHookCallSpy } from '../utils'
 import { act } from '@testing-library/react'
-import { StoreInternals } from '../../src/methods/store'
 import { pubsub } from '../../src/misc/pubsub'
 
 test('derived.get()', () => {

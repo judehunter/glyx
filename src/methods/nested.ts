@@ -1,4 +1,3 @@
-import { Brand } from '../misc/brand'
 import {
   getCurrentStore,
   isCurrentStoreSet,
@@ -7,8 +6,8 @@ import {
 } from '../misc/currentStore'
 import { makeInternals } from '../misc/makeInternals'
 import { attachObjToFn, makeKey } from '../misc/utils'
-import { atom, Atom } from './atom'
-import { CalledSelect, Select, select, SelectInternals } from './select'
+import { Atom } from './atom'
+import { CalledSelect, Select, SelectInternals } from './select'
 
 // TODO:
 // type NestedOnAtom<TValue, TNested> = Atom<TValue> & TNested

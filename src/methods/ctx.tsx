@@ -1,10 +1,4 @@
-import React, {
-  Context,
-  createContext,
-  ReactNode,
-  useContext,
-  useMemo,
-} from 'react'
+import { Context, createContext, ReactNode, useContext, useMemo } from 'react'
 
 const useContextOrThrow = <T,>(context: Context<T>, name: string) => {
   const value = useContext(context)

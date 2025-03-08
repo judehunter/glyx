@@ -1,20 +1,9 @@
 import { useRef, useMemo } from 'react'
-import {
-  callAndTrackDeps,
-  getNoTrack,
-  pushToDepsListIfTracking,
-} from '../misc/deps'
+import { getNoTrack, pushToDepsListIfTracking } from '../misc/deps'
 import { runInlineSelector } from '../misc/runInlineSelector'
 import { useSyncExternalStoreWithSelector } from '../misc/useSyncExternalStoreWithSelector'
 import { identity, uniqueDeps } from '../misc/utils'
-import { Brand } from '../misc/brand'
-import {
-  CurrentStore,
-  getCurrentStore,
-  getCurrentStoreRef,
-} from '../misc/currentStore'
 import { onInit } from './onInit'
-import { assertWith } from '../../test/utils'
 import { MakeInternals, makeInternals } from '../misc/makeInternals'
 import { pubsub } from '../misc/pubsub'
 

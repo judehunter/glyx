@@ -1,4 +1,3 @@
-import { getCurrentStoreRef } from '../misc/currentStore'
 import { pubsub } from '../misc/pubsub'
 import { onInit } from './onInit'
 

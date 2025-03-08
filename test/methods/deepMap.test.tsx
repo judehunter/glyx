@@ -1,9 +1,7 @@
 import { expect, test } from 'vitest'
 import { store } from '../../src'
 import { deepMap } from '../../src/methods/deepMap'
-import { assertWith, makeHookCallSpy } from '../utils'
-import { AtomInternals } from '../../src/methods/atom'
-import { StoreInternals } from '../../src/methods/store'
+import { makeHookCallSpy } from '../utils'
 import { act } from 'react'
 import { pubsub } from '../../src/misc/pubsub'
 

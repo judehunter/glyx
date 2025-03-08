@@ -1,8 +1,7 @@
-import { assertWith } from '../../test/utils'
 import { Atom, AtomInternals } from '../methods/atom'
 import { Group, GroupInternals } from '../methods/group'
 import { onInit } from '../methods/onInit'
-import { getCurrentStore } from '../misc/currentStore'
+import { assertWith } from '../misc/utils'
 
 const modifyAtom = <T extends Record<string, any>>(
   target: T,

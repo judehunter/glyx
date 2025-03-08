@@ -1,6 +1,6 @@
-import { assertWith } from '../../test/utils'
 import { callAndTrackDeps } from '../misc/deps'
 import { pubsub } from '../misc/pubsub'
+import { assertWith } from '../misc/utils'
 import { Atom, atom, AtomInternals } from './atom'
 import { onInit } from './onInit'
 

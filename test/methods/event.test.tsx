@@ -1,8 +1,6 @@
 import { expect, test, vi } from 'vitest'
 import { store } from '../../src/index'
 import { event } from '../../src/methods/event'
-import { assertWith } from '../utils'
-import { StoreInternals } from '../../src/methods/store'
 import { renderHook } from '@testing-library/react'
 import { act } from 'react'
 import { pubsub } from '../../src/misc/pubsub'

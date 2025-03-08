@@ -1,6 +1,4 @@
-import { useState } from 'react'
 import { useEffect } from 'react'
-import { pick } from '../middleware/pick'
 import { atom } from './atom'
 import { nested } from './nested'
 import { useStableFn } from '../misc/useStableFn'

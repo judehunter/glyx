@@ -1,9 +1,6 @@
-import { assertWith } from '../../test/utils'
 import { setCurrentStore, unsetCurrentStore } from '../misc/currentStore'
 import { MakeInternals, makeInternals } from '../misc/makeInternals'
-import { pubsub } from '../misc/pubsub'
-import { makeKey } from '../misc/utils'
-import { Atom } from './atom'
+import { assertWith } from '../misc/utils'
 import { Group, group, GroupInternals } from './group'
 
 export type Store<TReturn extends Record<string, any>> = Group<TReturn>
