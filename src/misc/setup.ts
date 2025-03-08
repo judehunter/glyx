@@ -2,7 +2,7 @@ import { Atom } from '../methods/atom'
 import { pubsub } from './pubsub'
 import { makeKey } from './utils'
 
-type Handles = {
+export type Handles = {
   get: ReturnType<typeof pubsub>['get']
   getAll: ReturnType<typeof pubsub>['getAll']
   sub: ReturnType<typeof pubsub>['sub']

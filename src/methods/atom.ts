@@ -10,25 +10,28 @@ export type Atom<TValue = unknown> = {
   ): TCustomSelected
   use<TCustomSelected = TValue>(
     customSelector?: (value: TValue) => TCustomSelected,
+    eqFn?: (a: any, b: any) => boolean,
   ): TCustomSelected
   sub(listener: (value: TValue) => void): () => void
   set(value: TValue): void
+}
 
+export type AtomInternals = {
   _glyx: {
     type: 'atom'
-    initialValue: TValue
+    initialValue: unknown
     onInit?: () => void
 
     // supplied by store:
     name: string
-    get(): TValue
+    get(): unknown
     getAll(): Record<string, unknown>
-    sub(listener: (value: TValue) => void): () => void
+    sub(listener: (value: unknown) => void): () => void
     subWithDeps: (
       deps: string[],
       listener: (value: unknown) => void,
     ) => () => void
-    set(value: TValue): void
+    set(value: unknown): void
   }
 }
 
@@ -36,15 +39,16 @@ export type AtomType<TAtom extends Atom> = TAtom extends Atom<infer TValue>
   ? TValue
   : never
 
-const makeGet = (target: Atom) => (customSelector?: (value: any) => any) => {
-  pushToDepsListIfTracking(target._glyx.name)
+const makeGet =
+  (target: Atom & AtomInternals) => (customSelector?: (value: any) => any) => {
+    pushToDepsListIfTracking(target._glyx.name)
 
-  const value = (customSelector ?? identity)(target._glyx.get())
-  return value
-}
+    const value = (customSelector ?? identity)(target._glyx.get())
+    return value
+  }
 
 const makeUse =
-  (target: Atom) =>
+  (target: Atom & AtomInternals) =>
   (
     customSelector?: (value: any) => any,
     eqFn?: (a: any, b: any) => boolean,
@@ -83,17 +87,18 @@ const makeUse =
     )
   }
 
-const makeSub = (target: Atom) => () => {
-  throw new Error('sub is not implemented for atom')
-}
+const makeSub =
+  (target: Atom & AtomInternals) => (listener: (value: any) => void) => {
+    return target._glyx.sub(listener)
+  }
 
-const makeSet = (target: Atom) => (value: any) => {
+const makeSet = (target: Atom & AtomInternals) => (value: any) => {
   target._glyx.set(value)
 }
 
 export const atom = <TValue>(initialValue: TValue) => {
   const target = {
-    _glyx: { type: 'atom', initialValue } as Atom<TValue>['_glyx'],
+    _glyx: { type: 'atom', initialValue } as AtomInternals['_glyx'],
 
     get: (...pass: Parameters<ReturnType<typeof makeGet>>) =>
       makeGet(target)(...pass),
@@ -106,7 +111,7 @@ export const atom = <TValue>(initialValue: TValue) => {
 
     set: (...pass: Parameters<ReturnType<typeof makeSet>>) =>
       makeSet(target)(...pass),
-  } satisfies Atom<TValue>
+  } satisfies Atom<TValue> & AtomInternals
 
   return target as Atom<TValue>
 }

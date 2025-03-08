@@ -25,6 +25,7 @@ describe('nested on select', () => {
     expect($.double().doubleAgain().get()).toBe(20)
 
     $.counter.set(10)
+    $._glyxTest().stored.flush()
 
     expect($.double().get()).toBe(20)
     expect($.double().doubleAgain().get()).toBe(40)
@@ -50,6 +51,7 @@ describe('nested on select', () => {
     expect($.mult(10).add(10).get()).toBe(60)
 
     $.counter.set(10)
+    $._glyxTest().stored.flush()
 
     expect($.mult(10).get()).toBe(100)
     expect($.mult(10).add(10).get()).toBe(110)
@@ -79,6 +81,7 @@ describe('nested on select', () => {
 
     act(() => {
       $.counter.set(10)
+      $._glyxTest().stored.flush()
     })
 
     expect(calls1()).toEqual([[10], [20]])
@@ -102,6 +105,7 @@ describe('nested on atom', () => {
     expect($.counter.double().get()).toBe(10)
 
     $.counter.set(10)
+    $._glyxTest().stored.flush()
 
     expect($.counter.get()).toBe(10)
     expect($.counter.double().get()).toBe(20)
@@ -126,6 +130,7 @@ describe('nested on atom', () => {
 
     act(() => {
       $.counter.set(10)
+      $._glyxTest().stored.flush()
     })
 
     expect(calls1()).toEqual([[5], [10]])

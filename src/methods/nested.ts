@@ -1,12 +1,12 @@
 import { setupGroup } from '../misc/setup'
 import { attachObjToFn, makeKey } from '../misc/utils'
 import { atom, Atom } from './atom'
-import { CalledSelect, Select, select } from './select'
+import { CalledSelect, Select, select, SelectInternals } from './select'
 
 type NestedOnAtom = any
 
 const nestedOnSelect = (
-  select: Select,
+  select: Select<any, any> & SelectInternals,
   nestedDef: (calledSelect: CalledSelect) => Record<string, any>,
 ) => {
   const newSelect = ((...args) => {
@@ -28,12 +28,12 @@ const nestedOnSelect = (
     )
 
     return { ...calledSelect, ...nested }
-  }) as Select
+  }) as Select<any, any> & SelectInternals
 
   return attachObjToFn(newSelect, {
     _glyx: {
       type: 'select',
-    } as Select['_glyx'],
+    },
   }) as any
 }
 
@@ -46,22 +46,19 @@ const nestedOnAtom = (
   return Object.assign(atom, nestedDef(atom))
 }
 
-function nested<TSelector extends (...args: any[]) => any, TNested>(
-  select: Select<TSelector>,
-  nestedDef: (calledSelect: CalledSelect<ReturnType<TSelector>>) => TNested,
-): ((
-  ...args: Parameters<TSelector>
-) => CalledSelect<ReturnType<TSelector>> & TNested) &
-  Select['_glyx']
+function nested<TParams extends any[], TReturn, TNested>(
+  select: Select<TParams, TReturn>,
+  nestedDef: (calledSelect: CalledSelect<TReturn>) => TNested,
+): (...args: TParams) => CalledSelect<TReturn, TNested>
 
 function nested<TValue, TNested>(
   atom: Atom<TValue>,
   nestedDef: (atom: NoInfer<Atom<TValue>>) => TNested,
 ): Atom<TValue> & TNested
 
-function nested(selectOrAtom: Select | Atom, nestedDef: unknown) {
-  if (selectOrAtom._glyx.type === 'select') {
-    return nestedOnSelect(selectOrAtom as Select, nestedDef as any)
+function nested(selectOrAtom: Select<any, any> | Atom, nestedDef: unknown) {
+  if ((selectOrAtom as any)._glyx.type === 'select') {
+    return nestedOnSelect(selectOrAtom as any, nestedDef as any)
   }
 
   return nestedOnAtom(selectOrAtom as Atom, nestedDef as any)

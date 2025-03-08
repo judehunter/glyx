@@ -21,6 +21,7 @@ test('group with nested atom', () => {
   })
 
   $.canvas.nodeCount.set(20)
+  $._glyxTest().stored.flush()
 
   expect($._glyxTest().stored.getAll()).toEqual({
     'canvas.nodeCount': 20,
@@ -54,6 +55,7 @@ test('nested groups with atoms', () => {
   $.a.set(4)
   $.b.c.set(5)
   $.b.d.e.set(6)
+  $._glyxTest().stored.flush()
 
   expect($._glyxTest().stored.getAll()).toEqual({
     a: 4,

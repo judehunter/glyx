@@ -24,6 +24,7 @@ test('select.get() with atom as dependency', () => {
   expect($.double._glyx.depsList).toEqual(['counter'])
 
   $.counter.set(20)
+  $._glyxTest().stored.flush()
 
   expect($.double().get()).toBe(40)
 })
@@ -57,6 +58,7 @@ test('select.get() with transitive dependency of another select', () => {
   expect($.quadruple._glyx.depsList).toEqual(['counter'])
 
   $.counter.set(20)
+  $._glyxTest().stored.flush()
 
   expect($.double().get()).toBe(40)
   expect($.quadruple().get()).toBe(80)
@@ -77,6 +79,7 @@ test('select.use() with atom as dependency', () => {
 
   act(() => {
     $.counter.set(20)
+    $._glyxTest().stored.flush()
   })
 
   expect(calls()).toEqual([[20], [40]])
@@ -101,6 +104,7 @@ test('select.use() with transitive dependency of another select', () => {
 
   act(() => {
     $.counter.set(20)
+    $._glyxTest().stored.flush()
   })
 
   expect(calls1()).toEqual([[20], [40]])
@@ -120,6 +124,7 @@ test('select.get() with selector args', () => {
   expect($.multi(3).get()).toBe(30)
 
   $.counter.set(20)
+  $._glyxTest().stored.flush()
 
   expect($.multi(2).get()).toBe(40)
   expect($.multi(3).get()).toBe(60)
@@ -138,6 +143,7 @@ test('select.use() with selector args', () => {
 
   act(() => {
     $.counter.set(20)
+    $._glyxTest().stored.flush()
   })
 
   expect(calls()).toEqual([[20], [40]])
@@ -156,10 +162,12 @@ test('select.get() with two atoms as dependencies', () => {
   expect($.c().get()).toBe(11)
 
   $.a.set(2)
+  $._glyxTest().stored.flush()
 
   expect($.c().get()).toBe(12)
 
   $.b.set(20)
+  $._glyxTest().stored.flush()
 
   expect($.c().get()).toBe(22)
 })
@@ -180,12 +188,14 @@ test('select.use() with two atoms as dependencies', () => {
 
   act(() => {
     $.a.set(2)
+    $._glyxTest().stored.flush()
   })
 
   expect(calls()).toEqual([[11], [12]])
 
   act(() => {
     $.b.set(20)
+    $._glyxTest().stored.flush()
   })
 
   expect(calls()).toEqual([[11], [12], [22]])
@@ -218,6 +228,7 @@ test('select.get() with custom selector that accesses another atom', () => {
   expect($.mult(2).get((x) => x + 5 + $.b.get())).toBe(125)
 
   $.a.set(11)
+  $._glyxTest().stored.flush()
 
   expect($.mult(2).get((x) => x + 5 + $.b.get())).toBe(127)
 })
@@ -237,6 +248,7 @@ test('select.use() with custom selector', () => {
 
   act(() => {
     $.a.set(11)
+    $._glyxTest().stored.flush()
   })
 
   expect(calls()).toEqual([[25], [27]])
@@ -258,12 +270,14 @@ test('select.use() with custom selector that accesses another atom', () => {
 
   act(() => {
     $.a.set(11)
+    $._glyxTest().stored.flush()
   })
 
   expect(calls()).toEqual([[120], [122]])
 
   act(() => {
     $.b.set(200)
+    $._glyxTest().stored.flush()
   })
 
   expect(calls()).toEqual([[120], [122], [222]])
@@ -289,6 +303,7 @@ test('select.use() tracks deps of selector and custom selector independently', (
 
   act(() => {
     $.a.set(2)
+    $._glyxTest().stored.flush()
   })
 
   expect(calls1()).toEqual([[2], [4]])
@@ -296,6 +311,7 @@ test('select.use() tracks deps of selector and custom selector independently', (
 
   act(() => {
     $.b.set(20)
+    $._glyxTest().stored.flush()
   })
 
   expect(calls1()).toEqual([[2], [4]])
@@ -338,6 +354,8 @@ test('select.use() with custom selector closing over component state', () => {
 
     return { a, plusOne }
   })
+
+  $.plusOne().
 
   const spy = vi.fn()
 

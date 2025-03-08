@@ -25,11 +25,12 @@ test('atom.set()', () => {
   expect($._glyxTest().stored.get('counter')).toBe(5)
 
   $.counter.set(10)
+  $._glyxTest().stored.flush()
 
   expect($._glyxTest().stored.get('counter')).toBe(10)
 })
 
-test.skip('atom.sub()', () => {
+test('atom.sub()', () => {
   const $ = store(() => {
     const counter = atom(0)
 
@@ -41,11 +42,13 @@ test.skip('atom.sub()', () => {
   $.counter.sub(listener)
 
   $.counter.set(1)
+  $._glyxTest().stored.flush()
 
   expect(listener).toHaveBeenCalledTimes(1)
   expect(listener).toHaveBeenCalledWith(1)
 
   $.counter.set(5)
+  $._glyxTest().stored.flush()
 
   expect(listener).toHaveBeenCalledTimes(2)
   expect(listener).toHaveBeenCalledWith(5)
@@ -71,6 +74,7 @@ test('atom.use()', () => {
 
   act(() => {
     $.counter.set(20)
+    $._glyxTest().stored.flush()
   })
 
   expect(spy).toHaveBeenCalledTimes(2)
@@ -104,6 +108,7 @@ test('atom.use() with custom selector', () => {
 
   act(() => {
     $.a.set(11)
+    $._glyxTest().stored.flush()
   })
 
   expect(calls()).toEqual([[15], [16]])
@@ -123,12 +128,14 @@ test('atom.use() with custom selector that access another atom', () => {
 
   act(() => {
     $.a.set(11)
+    $._glyxTest().stored.flush()
   })
 
   expect(calls()).toEqual([[110], [111]])
 
   act(() => {
     $.b.set(200)
+    $._glyxTest().stored.flush()
   })
 
   expect(calls()).toEqual([[110], [111], [211]])

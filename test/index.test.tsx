@@ -25,6 +25,7 @@ test('isolated updates with dependency tracking', () => {
 
   act(() => {
     $.a.set(2)
+    $._glyxTest().stored.flush()
   })
 
   expect(calls1()).toEqual([[1], [2]])
@@ -33,6 +34,7 @@ test('isolated updates with dependency tracking', () => {
 
   act(() => {
     $.b.set(20)
+    $._glyxTest().stored.flush()
   })
 
   expect(calls1()).toEqual([[1], [2]])
@@ -82,6 +84,7 @@ test('no zombie child problem', () => {
 
   act(() => {
     $.elems.set([11])
+    $._glyxTest().stored.flush()
   })
 
   expect(spyChild0.mock.calls).toEqual([[10], [11]])
@@ -105,6 +108,7 @@ test('no infinite loop with custom selector that returns an unstable reference',
 
   act(() => {
     $.a.set(2)
+    $._glyxTest().stored.flush()
   })
 
   expect(calls1()).toEqual([[{ x: 1 }], [{ x: 2 }]])
@@ -149,6 +153,7 @@ test('updates are batched', () => {
   act(() => {
     $.a.set(3)
     $.b.set(4)
+    $._glyxTest().stored.flush()
   })
 
   expect(calls()).toEqual([[3], [7]])
@@ -167,6 +172,7 @@ test('action inside store', () => {
 
   act(() => {
     $.increment()
+    $._glyxTest().stored.flush()
   })
 
   expect(calls()).toEqual([[1], [2]])
@@ -191,11 +197,13 @@ test('selectors are not called when something else updates', () => {
 
   act(() => {
     $.b.set(3)
+    $._glyxTest().stored.flush()
   })
 
   expect(calls()).toEqual([[1]])
 })
 
+// declare const map: any
 test('advanced use case', () => {
   const $ = store(() => {
     const $user = group(() => {
@@ -207,8 +215,8 @@ test('advanced use case', () => {
     })
 
     const $canvas = group(() => {
-      const nodes = atom([])
-      const edges = atom([])
+      const nodes = atom([{ id: '1' }, { id: '2' }])
+      const edges = atom([{ id: '1', source: '1', target: '2' }])
 
       return { nodes, edges }
     })
@@ -216,7 +224,39 @@ test('advanced use case', () => {
     return { $user, $canvas }
   })
 
-  // $.$canvas.
+  const calls = makeHookCallSpy(() => $.$canvas.pick(['edges', 'nodes']).use())
+
+  expect(calls()).toEqual([
+    [
+      {
+        edges: [{ id: '1', source: '1', target: '2' }],
+        nodes: [{ id: '1' }, { id: '2' }],
+      },
+    ],
+  ])
+
+  act(() => {
+    $.$canvas.nodes.set([])
+    $.$canvas.edges.set([])
+    $._glyxTest().stored.flush()
+  })
+
+  expect(calls()).toEqual([
+    [
+      {
+        edges: [{ id: '1', source: '1', target: '2' }],
+        nodes: [{ id: '1' }, { id: '2' }],
+      },
+    ],
+    [
+      {
+        edges: [],
+        nodes: [],
+      },
+    ],
+  ])
+
+  // $.pick()
 })
 
 // todo: select selector gets another select selector and tracks deps correctly (should work already since only the first select will start tracking deps at that point)

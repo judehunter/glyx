@@ -4,7 +4,9 @@ import { runCustomSelector } from '../misc/runCustomSelector'
 import { useSyncExternalStoreWithSelector } from '../misc/useSyncExternalStoreWithSelector'
 import { attachObjToFn, identity, uniqueDeps } from '../misc/utils'
 
-export type CalledSelect<TSelected = unknown> = {
+export declare const _glyxSelect: unique symbol
+
+export type CalledSelect<TSelected = unknown, TNested = {}> = {
   get<TCustomSelected = TSelected>(
     customSelector?: (value: TSelected) => TCustomSelected,
   ): TCustomSelected
@@ -12,11 +14,13 @@ export type CalledSelect<TSelected = unknown> = {
     customSelector?: (value: TSelected) => TCustomSelected,
   ): TCustomSelected
   sub(listener: (value: TSelected) => void): () => void
-}
+} & TNested & { [_glyxSelect]: void }
 
-export type Select<TSelector extends (...args: any[]) => any = any> = ((
-  ...args: Parameters<TSelector>
-) => CalledSelect<ReturnType<TSelector>>) & {
+export type Select<TParams extends any[], TReturn> = (
+  ...args: TParams
+) => CalledSelect<TReturn>
+
+export type SelectInternals = {
   _glyx: {
     type: 'select'
     depsList: undefined | string[]
@@ -31,7 +35,11 @@ export type Select<TSelector extends (...args: any[]) => any = any> = ((
 }
 
 const makeGet =
-  (target: Select, args: any[], selector: (...args: any[]) => any) =>
+  (
+    target: Select<any, any> & SelectInternals,
+    args: any[],
+    selector: (...args: any[]) => any,
+  ) =>
   (customSelector?: (...args: any[]) => any) => {
     const { value: selectedValue, depsList } = callAndTrackDeps(
       { trackDeps: !target._glyx.depsList },
@@ -46,12 +54,11 @@ const makeGet =
   }
 
 const makeUse =
-  (target: Select, args: any[]) =>
+  (target: Select<any, any> & SelectInternals, args: any[]) =>
   (
     customSelector?: (...args: any[]) => any,
     eqFn?: (a: any, b: any) => boolean,
   ) => {
-    // console.log(target, args, customSelector, eqFn)
     const customSelectorDepsRef = useRef<undefined | string[]>(undefined)
 
     const subscribe = useMemo(
@@ -99,17 +106,17 @@ const makeSub =
     throw new Error('sub is not implemented for select')
   }
 
-export const select = <TSelector extends (...args: any[]) => any>(
-  selector: TSelector,
+export const select = <TParams extends any[], TReturn>(
+  selector: (...args: TParams) => TReturn,
 ) => {
   const target = attachObjToFn(
     (...args: any[]) => {
       return {
         get: (...pass: Parameters<ReturnType<typeof makeGet>>) =>
-          makeGet(target, args, selector)(...pass),
+          makeGet(target as any, args, selector)(...pass),
 
         use: (...pass: Parameters<ReturnType<typeof makeUse>>) =>
-          makeUse(target, args)(...pass),
+          makeUse(target as any, args)(...pass),
 
         sub: (...pass: Parameters<ReturnType<typeof makeSub>>) =>
           makeSub(target, args, selector)(...pass),
@@ -118,9 +125,9 @@ export const select = <TSelector extends (...args: any[]) => any>(
     {
       _glyx: {
         type: 'select',
-      } as Select['_glyx'],
+      } as SelectInternals['_glyx'],
     },
-  ) satisfies Select<TSelector>
+  )
 
-  return target as Select<TSelector>
+  return target as any as Select<TParams, TReturn>
 }
