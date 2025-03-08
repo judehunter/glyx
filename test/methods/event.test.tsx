@@ -5,6 +5,7 @@ import { assertWith } from '../utils'
 import { StoreInternals } from '../../src/methods/store'
 import { renderHook } from '@testing-library/react'
 import { act } from 'react'
+import { pubsub } from '../../src/misc/pubsub'
 
 test('single listener, no props', () => {
   const $ = store(() => {
@@ -13,14 +14,12 @@ test('single listener, no props', () => {
     return { e }
   })
 
-  assertWith<StoreInternals>($)
-
   const spy = vi.fn()
 
   $.e.on(spy)
 
   $.e.emit()
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect(spy.mock.calls).toEqual([[undefined]])
 })
@@ -32,8 +31,6 @@ test('multiple listeners, no props', () => {
     return { e }
   })
 
-  assertWith<StoreInternals>($)
-
   const spy1 = vi.fn()
   const spy2 = vi.fn()
 
@@ -41,7 +38,7 @@ test('multiple listeners, no props', () => {
   $.e.on(spy2)
 
   $.e.emit()
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect(spy1.mock.calls).toEqual([[undefined]])
   expect(spy2.mock.calls).toEqual([[undefined]])
@@ -54,14 +51,12 @@ test('single listener, with props', () => {
     return { e }
   })
 
-  assertWith<StoreInternals>($)
-
   const spy = vi.fn()
 
   $.e.on(spy)
 
   $.e.emit(123)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect(spy.mock.calls).toEqual([[123]])
 })
@@ -72,8 +67,6 @@ test('.useOn', () => {
 
     return { e }
   })
-
-  assertWith<StoreInternals>($)
 
   const spy = vi.fn()
 
@@ -86,7 +79,7 @@ test('.useOn', () => {
 
   act(() => {
     $.e.emit(123)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(spy.mock.calls).toEqual([[123]])
@@ -99,16 +92,14 @@ test('.useOn registers and unregisters', () => {
     return { e }
   })
 
-  assertWith<StoreInternals>($)
-
   const { unmount } = renderHook(() => {
     $.e.useOn(() => {})
     return null
   })
 
-  expect($.getInternals().getStored().getListeners().e).toHaveLength(1)
+  expect(pubsub.getListeners()['$.e']).toHaveLength(1)
 
   unmount()
 
-  expect($.getInternals().getStored().getListeners().e).toHaveLength(0)
+  expect(pubsub.getListeners()['$.e']).toHaveLength(0)
 })

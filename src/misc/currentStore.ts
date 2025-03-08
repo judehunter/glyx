@@ -1,10 +1,7 @@
-import { Handles } from './setup'
-
 let CURRENT_STORE_REF: {
   current:
     | {
-        addOnInit: (fn: (handles: Handles) => void) => void
-        handles: Handles
+        addOnInit: (fn: () => void) => void
       }
     | undefined
 } = { current: undefined }

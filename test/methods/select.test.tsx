@@ -6,6 +6,7 @@ import { assertWith, makeHookCallSpy } from '../utils'
 import React, { useState } from 'react'
 import { StoreInternals } from '../../src/methods/store'
 import { SelectInternals } from '../../src/methods/select'
+import { pubsub } from '../../src/misc/pubsub'
 
 test('select.get() with atom as dependency', () => {
   const $ = store(() => {
@@ -16,20 +17,19 @@ test('select.get() with atom as dependency', () => {
     return { counter, double }
   })
 
-  assertWith<StoreInternals>($)
   assertWith<SelectInternals>($.double)
 
-  expect($.getInternals().getStored().getAll()).toEqual({
-    counter: 10,
+  expect(pubsub.getAll()).toEqual({
+    '$.counter': 10,
   })
 
   expect($.double.getInternals().depsList).toBeUndefined()
 
   expect($.double().get()).toBe(20)
-  expect($.double.getInternals().depsList).toEqual(['counter'])
+  expect($.double.getInternals().depsList).toEqual(['$.counter'])
 
   $.counter.set(20)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect($.double().get()).toBe(40)
 })
@@ -45,11 +45,10 @@ test('select.get() with transitive dependency of another select', () => {
     return { counter, double, quadruple }
   })
 
-  assertWith<StoreInternals>($)
   assertWith<SelectInternals>($.double)
   assertWith<SelectInternals>($.quadruple)
-  expect($.getInternals().getStored().getAll()).toEqual({
-    counter: 10,
+  expect(pubsub.getAll()).toEqual({
+    '$.counter': 10,
   })
 
   expect($.double.getInternals().depsList).toBeUndefined()
@@ -57,16 +56,16 @@ test('select.get() with transitive dependency of another select', () => {
 
   expect($.double().get()).toBe(20)
 
-  expect($.double.getInternals().depsList).toEqual(['counter'])
+  expect($.double.getInternals().depsList).toEqual(['$.counter'])
   expect($.quadruple.getInternals().depsList).toBeUndefined()
 
   expect($.quadruple().get()).toBe(40)
 
-  expect($.double.getInternals().depsList).toEqual(['counter'])
-  expect($.quadruple.getInternals().depsList).toEqual(['counter'])
+  expect($.double.getInternals().depsList).toEqual(['$.counter'])
+  expect($.quadruple.getInternals().depsList).toEqual(['$.counter'])
 
   $.counter.set(20)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect($.double().get()).toBe(40)
   expect($.quadruple().get()).toBe(80)
@@ -81,15 +80,13 @@ test('select.use() with atom as dependency', () => {
     return { counter, double }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls = makeHookCallSpy(() => $.double().use())
 
   expect(calls()).toEqual([[20]])
 
   act(() => {
     $.counter.set(20)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[20], [40]])
@@ -106,8 +103,6 @@ test('select.use() with transitive dependency of another select', () => {
     return { counter, double, quadruple }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls1 = makeHookCallSpy(() => $.double().use())
   const calls2 = makeHookCallSpy(() => $.quadruple().use())
 
@@ -116,7 +111,7 @@ test('select.use() with transitive dependency of another select', () => {
 
   act(() => {
     $.counter.set(20)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls1()).toEqual([[20], [40]])
@@ -132,13 +127,11 @@ test('select.get() with selector args', () => {
     return { counter, multi }
   })
 
-  assertWith<StoreInternals>($)
-
   expect($.multi(2).get()).toBe(20)
   expect($.multi(3).get()).toBe(30)
 
   $.counter.set(20)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect($.multi(2).get()).toBe(40)
   expect($.multi(3).get()).toBe(60)
@@ -153,13 +146,11 @@ test('select.use() with selector args', () => {
     return { counter, multi }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls = makeHookCallSpy(() => $.multi(2).use())
 
   act(() => {
     $.counter.set(20)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[20], [40]])
@@ -175,17 +166,15 @@ test('select.get() with two atoms as dependencies', () => {
     return { a, b, c }
   })
 
-  assertWith<StoreInternals>($)
-
   expect($.c().get()).toBe(11)
 
   $.a.set(2)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect($.c().get()).toBe(12)
 
   $.b.set(20)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect($.c().get()).toBe(22)
 })
@@ -200,22 +189,20 @@ test('select.use() with two atoms as dependencies', () => {
     return { a, b, c }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls = makeHookCallSpy(() => $.c().use())
 
   expect(calls()).toEqual([[11]])
 
   act(() => {
     $.a.set(2)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[11], [12]])
 
   act(() => {
     $.b.set(20)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[11], [12], [22]])
@@ -244,13 +231,11 @@ test('select.get() with custom selector that accesses another atom', () => {
     return { a, b, mult }
   })
 
-  assertWith<StoreInternals>($)
-
   expect($.mult(2).get()).toBe(20)
   expect($.mult(2).get((x) => x + 5 + $.b.get())).toBe(125)
 
   $.a.set(11)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect($.mult(2).get((x) => x + 5 + $.b.get())).toBe(127)
 })
@@ -263,7 +248,6 @@ test('select.use() with custom selector', () => {
 
     return { a, mult }
   })
-  assertWith<StoreInternals>($)
 
   const calls = makeHookCallSpy(() => $.mult(2).use((x) => x + 5))
 
@@ -271,7 +255,7 @@ test('select.use() with custom selector', () => {
 
   act(() => {
     $.a.set(11)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[25], [27]])
@@ -287,22 +271,20 @@ test('select.use() with custom selector that accesses another atom', () => {
     return { a, b, mult }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls = makeHookCallSpy(() => $.mult(2).use((x) => x + $.b.get()))
 
   expect(calls()).toEqual([[120]])
 
   act(() => {
     $.a.set(11)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[120], [122]])
 
   act(() => {
     $.b.set(200)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[120], [122], [222]])
@@ -318,8 +300,6 @@ test('select.use() tracks deps of selector and custom selector independently', (
     return { a, b, c }
   })
 
-  assertWith<StoreInternals>($)
-
   const c = $.c()
 
   const calls1 = makeHookCallSpy(() => c.use())
@@ -330,7 +310,7 @@ test('select.use() tracks deps of selector and custom selector independently', (
 
   act(() => {
     $.a.set(2)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls1()).toEqual([[2], [4]])
@@ -338,7 +318,7 @@ test('select.use() tracks deps of selector and custom selector independently', (
 
   act(() => {
     $.b.set(20)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls1()).toEqual([[2], [4]])
@@ -413,7 +393,6 @@ test('select with dynamicDeps', () => {
     return { a, b, c }
   })
 
-  assertWith<StoreInternals>($)
   assertWith<SelectInternals>($.c)
 
   const calls1 = makeHookCallSpy(() => $.c($.a).use())
@@ -426,7 +405,7 @@ test('select with dynamicDeps', () => {
 
   act(() => {
     $.a.set(3)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls1()).toEqual([[1], [3]])
@@ -434,7 +413,7 @@ test('select with dynamicDeps', () => {
 
   act(() => {
     $.b.set(4)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls1()).toEqual([[1], [3]])

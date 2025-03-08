@@ -1,4 +1,5 @@
 import { getCurrentStoreRef } from '../misc/currentStore'
+import { pubsub } from '../misc/pubsub'
 import { onInit } from './onInit'
 
 /**
@@ -25,7 +26,7 @@ import { onInit } from './onInit'
  * @param fn - The callback function to run when the dependencies change.
  */
 export const watch = (deps: any[], fn: () => void) => {
-  onInit(({ subKeys }) => {
+  onInit(() => {
     let toSub = [] as string[]
     //TODO: USE SELECT._GLYX.DEPSLIST?
     // maybe a watch on a select doesn't even make sense? because a select runs in react
@@ -39,7 +40,7 @@ export const watch = (deps: any[], fn: () => void) => {
       }
     }
 
-    subKeys(toSub, () => {
+    pubsub.subKeys(toSub, () => {
       fn()
     })
   })

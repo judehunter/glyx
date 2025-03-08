@@ -8,6 +8,7 @@ import { StoreInternals } from '../src/methods/store'
 import { DEPS_LIST, TRACKING_DEPS } from '../src/misc/deps'
 import { AtomInternals } from '../src/methods/atom'
 import { SelectInternals } from '../src/methods/select'
+import { pubsub } from '../src/misc/pubsub'
 
 test('isolated updates with dependency tracking', () => {
   const $ = store(() => {
@@ -19,8 +20,6 @@ test('isolated updates with dependency tracking', () => {
     return { a, b, c }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls1 = makeHookCallSpy(() => $.a.use())
   const calls2 = makeHookCallSpy(() => $.b.use())
   const calls3 = makeHookCallSpy(() => $.c().use())
@@ -31,7 +30,7 @@ test('isolated updates with dependency tracking', () => {
 
   act(() => {
     $.a.set(2)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls1()).toEqual([[1], [2]])
@@ -40,7 +39,7 @@ test('isolated updates with dependency tracking', () => {
 
   act(() => {
     $.b.set(20)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls1()).toEqual([[1], [2]])
@@ -53,8 +52,6 @@ test('no zombie child problem', () => {
     const elems = atom([10, 20])
     return { elems }
   })
-
-  assertWith<StoreInternals>($)
 
   const spyChild0 = vi.fn()
   const spyChild1 = vi.fn()
@@ -92,7 +89,7 @@ test('no zombie child problem', () => {
 
   act(() => {
     $.elems.set([11])
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(spyChild0.mock.calls).toEqual([[10], [11]])
@@ -108,8 +105,6 @@ test('no infinite loop with custom selector that returns an unstable reference',
     return { a, b }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls1 = makeHookCallSpy(() => $.a.use((x) => ({ x })))
   const calls2 = makeHookCallSpy(() => $.b().use((x) => ({ x })))
 
@@ -118,7 +113,7 @@ test('no infinite loop with custom selector that returns an unstable reference',
 
   act(() => {
     $.a.set(2)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls1()).toEqual([[{ x: 1 }], [{ x: 2 }]])
@@ -132,8 +127,6 @@ test('component unsubscribes', () => {
     return { a, b }
   })
 
-  assertWith<StoreInternals>($)
-
   const Comp = () => {
     $.a.use()
     $.b().use()
@@ -142,11 +135,12 @@ test('component unsubscribes', () => {
 
   const { unmount } = render(<Comp />)
 
-  expect($.getInternals().getStored().getListeners().a).toHaveLength(2)
+  const x = pubsub
+  expect(pubsub.getListeners()['$.a']).toHaveLength(2)
 
   unmount()
 
-  expect($.getInternals().getStored().getListeners().a).toHaveLength(0)
+  expect(pubsub.getListeners()['$.a']).toHaveLength(0)
 })
 
 // this is handled by React, not Glyx
@@ -158,8 +152,6 @@ test('updates are batched', () => {
     return { a, b, c }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls = makeHookCallSpy(() => $.c().use())
 
   expect(calls()).toEqual([[3]])
@@ -167,7 +159,7 @@ test('updates are batched', () => {
   act(() => {
     $.a.set(3)
     $.b.set(4)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[3], [7]])
@@ -180,15 +172,13 @@ test('action inside store', () => {
     return { a, increment }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls = makeHookCallSpy(() => $.a.use())
 
   expect(calls()).toEqual([[1]])
 
   act(() => {
     $.increment()
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[1], [2]])
@@ -200,8 +190,6 @@ test('selectors are not called when something else updates', () => {
     const b = atom(2)
     return { a, b }
   })
-
-  assertWith<StoreInternals>($)
 
   const spy = vi.fn()
   const calls = makeHookCallSpy(() =>
@@ -215,7 +203,7 @@ test('selectors are not called when something else updates', () => {
 
   act(() => {
     $.b.set(3)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[1]])
@@ -234,7 +222,6 @@ test('select fails gracefully on error thrown in selector', () => {
     return { a, b }
   })
 
-  assertWith<StoreInternals>($)
   assertWith<SelectInternals>($.b)
 
   expect(() => $.b(true).get()).toThrow('test')
@@ -246,7 +233,7 @@ test('select fails gracefully on error thrown in selector', () => {
   expect(() => $.b(false).get()).not.toThrow()
   expect(TRACKING_DEPS).toBe(false)
   expect(DEPS_LIST).toEqual([])
-  expect($.b.getInternals().depsList).toEqual(['a'])
+  expect($.b.getInternals().depsList).toEqual(['$.a'])
 })
 
 // declare const map: any
@@ -270,8 +257,6 @@ test('advanced use case', () => {
     return { $user, $canvas }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls = makeHookCallSpy(() => $.$canvas.pick(['edges', 'nodes']).use())
 
   expect(calls()).toEqual([
@@ -286,7 +271,7 @@ test('advanced use case', () => {
   act(() => {
     $.$canvas.nodes.set([])
     $.$canvas.edges.set([])
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([
@@ -308,3 +293,22 @@ test('advanced use case', () => {
 })
 
 // todo: select selector gets another select selector and tracks deps correctly (should work already since only the first select will start tracking deps at that point)
+
+test('works without flushing', async () => {
+  const $ = store(() => {
+    const a = atom(1)
+    return { a }
+  })
+
+  const calls = makeHookCallSpy(() => $.a.use())
+
+  expect(calls()).toEqual([[1]])
+
+  await act(async () => {
+    $.a.set(2)
+
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  })
+
+  expect(calls()).toEqual([[1], [2]])
+})

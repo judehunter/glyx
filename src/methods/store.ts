@@ -2,7 +2,6 @@ import { assertWith } from '../../test/utils'
 import { setCurrentStore, unsetCurrentStore } from '../misc/currentStore'
 import { MakeInternals, makeInternals } from '../misc/makeInternals'
 import { pubsub } from '../misc/pubsub'
-import { Handles } from '../misc/setup'
 import { makeKey } from '../misc/utils'
 import { Atom } from './atom'
 import { Group, group, GroupInternals } from './group'
@@ -10,9 +9,7 @@ import { Group, group, GroupInternals } from './group'
 export type Store<TReturn extends Record<string, any>> = Group<TReturn>
 
 export type StoreInternals = MakeInternals<
-  {
-    getStored: () => ReturnType<typeof pubsub>
-  } & ReturnType<GroupInternals['getInternals']>
+  {} & ReturnType<GroupInternals['getInternals']>
 >
 
 /**
@@ -51,14 +48,11 @@ export type StoreInternals = MakeInternals<
  * @returns the initialized store, ready to use.
  */
 export const store = <T extends Record<string, any>>(defFn: () => T) => {
-  const stored = pubsub()
-
-  const initSubbed = [] as ((handles: Handles) => void)[]
+  const initSubbed = [] as (() => void)[]
   setCurrentStore({
     addOnInit: (fn) => {
       initSubbed.push(fn)
     },
-    handles: stored,
   })
 
   const def = defFn()
@@ -66,17 +60,17 @@ export const store = <T extends Record<string, any>>(defFn: () => T) => {
 
   assertWith<GroupInternals>(defGroup)
 
-  defGroup.getInternals().setup(null)
+  // todo: name
+  defGroup.getInternals().setup('$')
 
   for (const fn of initSubbed) {
-    fn(stored)
+    fn()
   }
 
   unsetCurrentStore()
 
   const internals = makeInternals({
     ...defGroup.getInternals(),
-    getStored: () => stored,
   })
 
   return { ...defGroup, ...internals } as Store<T>

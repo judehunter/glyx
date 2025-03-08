@@ -2,6 +2,7 @@ import { expect, test, vi } from 'vitest'
 import { store, atom, watch } from '../../src/index'
 import { StoreInternals } from '../../src/methods/store'
 import { assertWith } from '../utils'
+import { pubsub } from '../../src/misc/pubsub'
 
 test('watch callback fires once for multiple deps', () => {
   const spy = vi.fn()
@@ -16,13 +17,11 @@ test('watch callback fires once for multiple deps', () => {
     return { a, b }
   })
 
-  assertWith<StoreInternals>($)
-
   expect(spy).toHaveBeenCalledTimes(0)
 
   $.a.set(3)
   $.a.set(4)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect(spy).toHaveBeenCalledTimes(1)
 })

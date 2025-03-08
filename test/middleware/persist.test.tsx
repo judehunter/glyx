@@ -3,6 +3,7 @@ import { atom, store } from '../../src'
 import { getAtomName, persist } from '../../src/middleware/persist'
 import { StoreInternals } from '../../src/methods/store'
 import { assertWith } from '../utils'
+import { pubsub } from '../../src/misc/pubsub'
 
 const makeMockStorage = (init = {}) => {
   const storage = { ...init }
@@ -21,8 +22,7 @@ test('persist on atom, loaded instantly, empty storage', () => {
     return { a }
   })
 
-  assertWith<StoreInternals>($)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect(storage.getItem.mock.calls).toEqual([['test']])
   expect(storage.setItem.mock.calls).toEqual([
@@ -40,8 +40,7 @@ test('persist on atom, loaded instantly, from storage', () => {
     return { a }
   })
 
-  assertWith<StoreInternals>($)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect(storage.getItem.mock.calls).toEqual([['test']])
   expect(storage.setItem.mock.calls).toEqual([
@@ -59,15 +58,14 @@ test('persist on atom, loaded manually, empty storage', () => {
     return { a }
   })
 
-  assertWith<StoreInternals>($)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect(storage.getItem.mock.calls).toEqual([])
   expect(storage.setItem.mock.calls).toEqual([])
   expect(storage.getAll()).toEqual({})
 
   $.a.persist.load()
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect(storage.getItem.mock.calls).toEqual([['test']])
   expect(storage.setItem.mock.calls).toEqual([
@@ -85,15 +83,14 @@ test('persist on atom, loaded manually, from storage', () => {
     return { a }
   })
 
-  assertWith<StoreInternals>($)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect(storage.getItem.mock.calls).toEqual([])
   expect(storage.setItem.mock.calls).toEqual([])
   expect(storage.getAll()).toEqual({ test: '{"value":2,"version":0}' })
 
   $.a.persist.load()
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect(storage.getItem.mock.calls).toEqual([['test']])
   expect(storage.setItem.mock.calls).toEqual([
@@ -111,15 +108,14 @@ test('persist on atom, different version', () => {
     return { a }
   })
 
-  assertWith<StoreInternals>($)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect(storage.getItem.mock.calls).toEqual([])
   expect(storage.setItem.mock.calls).toEqual([])
   expect(storage.getAll()).toEqual({ test: '{"value":2,"version":0}' })
 
   $.a.persist.load()
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect(storage.getItem.mock.calls).toEqual([['test']])
   expect(storage.setItem.mock.calls).toEqual([
@@ -137,18 +133,19 @@ test('persist on atom, atom name as key', () => {
     return { a }
   })
 
-  assertWith<StoreInternals>($)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect(storage.getItem.mock.calls).toEqual([])
   expect(storage.setItem.mock.calls).toEqual([])
   expect(storage.getAll()).toEqual({})
 
   $.a.persist.load()
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
-  expect(storage.getItem.mock.calls).toEqual([['a']])
-  expect(storage.setItem.mock.calls).toEqual([['a', '{"value":1,"version":0}']])
-  expect(storage.getAll()).toEqual({ a: '{"value":1,"version":0}' })
+  expect(storage.getItem.mock.calls).toEqual([['$.a']])
+  expect(storage.setItem.mock.calls).toEqual([
+    ['$.a', '{"value":1,"version":0}'],
+  ])
+  expect(storage.getAll()).toEqual({ '$.a': '{"value":1,"version":0}' })
   expect($.a.get()).toEqual(1)
 })

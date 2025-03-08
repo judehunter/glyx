@@ -7,6 +7,7 @@ import { Brand } from '../misc/brand'
 import { CurrentStore, getCurrentStore } from '../misc/currentStore'
 import { assertWith } from '../../test/utils'
 import { MakeInternals, makeInternals } from '../misc/makeInternals'
+import { pubsub } from '../misc/pubsub'
 
 export type CalledSelect<TSelected = unknown, TNested = {}> = {
   get<TCustomSelected = TSelected>(
@@ -44,7 +45,6 @@ const makeGet =
     target: Select<any, any> & SelectInternals,
     args: any[],
     selector: (...args: any[]) => any,
-    store: CurrentStore,
   ) =>
   (customSelector?: (...args: any[]) => any) => {
     const targetInternals = target.getInternals()
@@ -65,11 +65,7 @@ const makeGet =
   }
 
 const makeUse =
-  (
-    target: Select<any, any> & SelectInternals,
-    args: any[],
-    store: CurrentStore,
-  ) =>
+  (target: Select<any, any> & SelectInternals, args: any[]) =>
   (
     inlineSelector?: (...args: any[]) => any,
     eqFn?: (a: any, b: any) => boolean,
@@ -91,7 +87,7 @@ const makeUse =
           }
         }
 
-        return store.handles.subKeys(
+        return pubsub.subKeys(
           uniqueDeps(depsList, inlineSelectorDepsRef.current),
           listener,
         )
@@ -106,8 +102,8 @@ const makeUse =
       // so between store updates (and re-renders for other reasons),
       // if React calls getSnapshot, the selector won't be re-run,
       // and the previously selected value will be reused.
-      store.handles.getAll,
-      store.handles.getAll,
+      pubsub.getAll,
+      pubsub.getAll,
       () => {
         const targetInternals = target.getInternals()
         if (targetInternals.dynamicDeps) {
@@ -132,20 +128,13 @@ const makeUse =
 
 // TODO: custom select fn
 const makeSub =
-  (
-    target: any,
-    args: any[],
-    selector: (...args: any[]) => any,
-    store: CurrentStore,
-  ) =>
-  () => {
+  (target: any, args: any[], selector: (...args: any[]) => any) => () => {
     throw new Error('sub is not implemented for select')
   }
 
-const makeWith =
-  (target: any) => (apply: (atom: any) => any) => {
-    return apply(target)
-  }
+const makeWith = (target: any) => (apply: (atom: any) => any) => {
+  return apply(target)
+}
 
 /**
  * Creates a predefined selector that tracks its atom dependencies.
@@ -195,13 +184,13 @@ export const select = <TParams extends any[], TReturn>(
     (...args: any[]) => {
       return {
         get: (...pass: Parameters<ReturnType<typeof makeGet>>) =>
-          makeGet(target as any, args, selector, store)(...pass),
+          makeGet(target as any, args, selector)(...pass),
 
         use: (...pass: Parameters<ReturnType<typeof makeUse>>) =>
-          makeUse(target as any, args, store)(...pass),
+          makeUse(target as any, args)(...pass),
 
         sub: (...pass: Parameters<ReturnType<typeof makeSub>>) =>
-          makeSub(target, args, selector, store)(...pass),
+          makeSub(target, args, selector)(...pass),
       }
     },
     {

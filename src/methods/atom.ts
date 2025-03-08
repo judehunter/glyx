@@ -16,6 +16,7 @@ import {
 import { onInit } from './onInit'
 import { assertWith } from '../../test/utils'
 import { MakeInternals, makeInternals } from '../misc/makeInternals'
+import { pubsub } from '../misc/pubsub'
 
 export type Atom<TValue = unknown> = {
   get<TCustomSelected = TValue>(
@@ -43,8 +44,7 @@ export type AtomType<TAtom extends Atom> = TAtom extends Atom<infer TValue>
   : never
 
 const makeGet =
-  (target: Atom & AtomInternals, store: CurrentStore) =>
-  (inlineSelector?: (value: any) => any) => {
+  (target: Atom & AtomInternals) => (inlineSelector?: (value: any) => any) => {
     // todo: throw if before init
 
     if (!getNoTrack()) {
@@ -52,13 +52,13 @@ const makeGet =
     }
 
     const value = (inlineSelector ?? identity)(
-      store.handles.getKey(target.getInternals().name),
+      pubsub.getKey(target.getInternals().name),
     )
     return value
   }
 
 const makeUse =
-  (target: Atom & AtomInternals, store: CurrentStore) =>
+  (target: Atom & AtomInternals) =>
   (
     inlineSelector?: (value: any) => any,
     eqFn?: (a: any, b: any) => boolean,
@@ -71,7 +71,7 @@ const makeUse =
           throw new Error('inlineSelectorDepsRef.current is undefined')
         }
 
-        return store.handles.subKeys(
+        return pubsub.subKeys(
           uniqueDeps(
             [target.getInternals().name],
             inlineSelectorDepsRef.current,
@@ -85,8 +85,8 @@ const makeUse =
     return useSyncExternalStoreWithSelector(
       subscribe,
       // see note in select.use
-      store.handles.getAll,
-      store.handles.getAll,
+      pubsub.getAll,
+      pubsub.getAll,
       () => {
         const value = target.get()
 
@@ -101,15 +101,13 @@ const makeUse =
   }
 
 const makeSub =
-  (target: Atom & AtomInternals, store: CurrentStore) =>
-  (listener: (value: any) => void) => {
-    return store.handles.subKeys([target.getInternals().name], listener)
+  (target: Atom & AtomInternals) => (listener: (value: any) => void) => {
+    return pubsub.subKeys([target.getInternals().name], listener)
   }
 
-const makeSet =
-  (target: Atom & AtomInternals, store: CurrentStore) => (value: any) => {
-    store.handles.setKey(target.getInternals().name, value)
-  }
+const makeSet = (target: Atom & AtomInternals) => (value: any) => {
+  pubsub.setKey(target.getInternals().name, value)
+}
 
 const makeWith =
   (target: Atom & AtomInternals) => (apply: (atom: Atom) => any) => {
@@ -152,24 +150,27 @@ export const atom = <TValue>(initialValue: TValue) => {
     },
   })
 
-  onInit(({ setKeyInitialValue, getAnonName }) => {
+  onInit(() => {
     if (!(internals.getInternals() as any).name) {
-      internals.setPartialInternals({ name: getAnonName() } as any)
+      internals.setPartialInternals({ name: pubsub.getAnonName() } as any)
     }
-    setKeyInitialValue((internals.getInternals() as any).name, initialValue)
+    pubsub.setKeyInitialValue(
+      (internals.getInternals() as any).name,
+      initialValue,
+    )
   })
 
   const get = ((...pass: Parameters<ReturnType<typeof makeGet>>) =>
-    makeGet(target as any, store)(...pass)) as Atom<TValue>['get']
+    makeGet(target as any)(...pass)) as Atom<TValue>['get']
 
   const use = ((...pass: Parameters<ReturnType<typeof makeUse>>) =>
-    makeUse(target as any, store)(...pass)) as Atom<TValue>['use']
+    makeUse(target as any)(...pass)) as Atom<TValue>['use']
 
   const sub = ((...pass: Parameters<ReturnType<typeof makeSub>>) =>
-    makeSub(target as any, store)(...pass)) as Atom<TValue>['sub']
+    makeSub(target as any)(...pass)) as Atom<TValue>['sub']
 
   const set = ((...pass: Parameters<ReturnType<typeof makeSet>>) =>
-    makeSet(target as any, store)(...pass)) as Atom<TValue>['set']
+    makeSet(target as any)(...pass)) as Atom<TValue>['set']
 
   const withFn = ((...pass: Parameters<ReturnType<typeof makeWith>>) =>
     makeWith(target as any)(...pass)) as Atom<TValue>['with']

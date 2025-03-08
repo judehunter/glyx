@@ -13,8 +13,6 @@ test('omit method from atom', () => {
     return { a }
   })
 
-  assertWith<StoreInternals>($)
-
   expect($.a.set).toBeDefined()
   expect(($.a as any).get).toBeUndefined()
 

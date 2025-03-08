@@ -5,6 +5,7 @@ import { assertWith, makeHookCallSpy } from '../utils'
 import { AtomInternals } from '../../src/methods/atom'
 import { StoreInternals } from '../../src/methods/store'
 import { act } from 'react'
+import { pubsub } from '../../src/misc/pubsub'
 
 test('deepMap.pick() - single key, unchanged structure', () => {
   const obj = Object.freeze({
@@ -22,10 +23,8 @@ test('deepMap.pick() - single key, unchanged structure', () => {
     return { foo }
   })
 
-  assertWith<StoreInternals>($)
-
   expect($.foo.get()).toEqual(obj)
-  expect($.getInternals().getStored().getAll()).toEqual({ foo: obj })
+  expect(pubsub.getAll()).toEqual({ foo: obj })
 
   const calls1 = makeHookCallSpy(() => $.foo.pick(['B.BB.BBA']).use())
   const calls2 = makeHookCallSpy(() => $.foo.pick(['B.BA']).use())
@@ -53,7 +52,7 @@ test('deepMap.pick() - single key, unchanged structure', () => {
 
   act(() => {
     $.foo.setDeep({ B: { BB: { BBA: 5 } } })
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls1()).toEqual([
@@ -88,7 +87,7 @@ test('deepMap.pick() - single key, unchanged structure', () => {
 
   act(() => {
     $.foo.setDeep({ B: { BB: { BBB: 6 } } })
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls1()).toEqual([
@@ -123,7 +122,7 @@ test('deepMap.pick() - single key, unchanged structure', () => {
 
   act(() => {
     $.foo.setDeep({ B: { BA: 7 } })
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls1()).toEqual([
@@ -181,8 +180,6 @@ test('deepMap.pick() - multi key, unchanged structure', () => {
     return { foo }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls = makeHookCallSpy(() => $.foo.pick(['B.BB.BBA', 'B.BA']).use())
 
   expect(calls()).toEqual([
@@ -200,7 +197,7 @@ test('deepMap.pick() - multi key, unchanged structure', () => {
 
   act(() => {
     $.foo.setDeep({ B: { BB: { BBA: 5 } } })
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([
@@ -228,7 +225,7 @@ test('deepMap.pick() - multi key, unchanged structure', () => {
 
   act(() => {
     $.foo.setDeep({ B: { BB: { BBB: 6 } } })
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([
@@ -256,7 +253,7 @@ test('deepMap.pick() - multi key, unchanged structure', () => {
 
   act(() => {
     $.foo.setDeep({ B: { BA: 7 } })
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([
@@ -318,8 +315,6 @@ test.only('deepMap.pick() - multi key, changed structure', () => {
     return { foo }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls1 = makeHookCallSpy(() => $.foo.pick(['B.BB.BBA', 'B.BA']).use())
   const calls2 = makeHookCallSpy(() => $.foo.pick(['B']).use())
   const calls3 = makeHookCallSpy(() =>
@@ -356,7 +351,7 @@ test.only('deepMap.pick() - multi key, changed structure', () => {
   $.foo.setDeep({})
   act(() => {
     $.foo.setDeep({ B: { alt: { nested: 5 } } })
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls1()).toEqual([

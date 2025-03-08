@@ -3,6 +3,7 @@ import { atom, derived, select, store } from '../../src/index'
 import { assertWith, makeHookCallSpy } from '../utils'
 import { act } from '@testing-library/react'
 import { StoreInternals } from '../../src/methods/store'
+import { pubsub } from '../../src/misc/pubsub'
 
 test('derived.get()', () => {
   const $ = store(() => {
@@ -12,22 +13,20 @@ test('derived.get()', () => {
     return { count, double }
   })
 
-  assertWith<StoreInternals>($)
-
-  expect($.getInternals().getStored().getAll()).toEqual({
-    count: 1,
-    double: 2,
+  expect(pubsub.getAll()).toEqual({
+    '$.count': 1,
+    '$.double': 2,
   })
 
   expect($.count.get()).toEqual(1)
   expect($.double.get()).toEqual(2)
 
   $.count.set(2)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
-  expect($.getInternals().getStored().getAll()).toEqual({
-    count: 2,
-    double: 4,
+  expect(pubsub.getAll()).toEqual({
+    '$.count': 2,
+    '$.double': 4,
   })
 
   expect($.count.get()).toEqual(2)
@@ -42,15 +41,13 @@ test('derived.use()', () => {
     return { count, double }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls = makeHookCallSpy(() => $.double.use())
 
   expect(calls()).toEqual([[2]])
 
   act(() => {
     $.count.set(2)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[2], [4]])
@@ -65,22 +62,20 @@ test('derived.use() on two atoms', () => {
     return { a, b, sum }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls = makeHookCallSpy(() => $.sum.use())
 
   expect(calls()).toEqual([[3]])
 
   act(() => {
     $.a.set(10)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[3], [12]])
 
   act(() => {
     $.b.set(20)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[3], [12], [30]])
@@ -95,15 +90,13 @@ test('derived.use() on a derived', () => {
     return { a, double, quadruple }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls = makeHookCallSpy(() => $.quadruple.use())
 
   expect(calls()).toEqual([[4]])
 
   act(() => {
     $.a.set(10)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[4], [40]])
@@ -118,15 +111,13 @@ test('derived.use() on a select', () => {
     return { a, double, quadruple }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls = makeHookCallSpy(() => $.quadruple.use())
 
   expect(calls()).toEqual([[4]])
 
   act(() => {
     $.a.set(10)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[4], [40]])
@@ -161,14 +152,12 @@ test('derived function is called once even when two deps change', async () => {
     return { a, b, sum }
   })
 
-  assertWith<StoreInternals>($)
-
   expect(spy.mock.calls).toEqual([[3]])
 
   act(() => {
     $.a.set(10)
     $.b.set(20)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   // await new Promise((resolve) => setTimeout(resolve, 0))

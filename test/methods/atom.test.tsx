@@ -9,6 +9,7 @@ import { Atom, AtomInternals } from '../../src/methods/atom'
 import { pick } from '../../src/middleware/pick'
 import { omit } from '../../src/middleware/omit'
 import { name } from '../../src/middleware/name'
+import { pubsub } from '../../src/misc/pubsub'
 
 test('.get() of initial value', () => {
   const $ = store(() => {
@@ -27,14 +28,12 @@ test('.set()', () => {
     return { counter }
   })
 
-  assertWith<StoreInternals>($)
-
-  expect($.getInternals().getStored().getKey('counter')).toBe(5)
+  expect(pubsub.getKey('$.counter')).toBe(5)
 
   $.counter.set(10)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
-  expect($.getInternals().getStored().getKey('counter')).toBe(10)
+  expect(pubsub.getKey('$.counter')).toBe(10)
 })
 
 test('.sub()', () => {
@@ -44,19 +43,17 @@ test('.sub()', () => {
     return { counter }
   })
 
-  assertWith<StoreInternals>($)
-
   const spy = vi.fn()
 
   $.counter.sub(spy)
 
   $.counter.set(1)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect(spy.mock.calls).toEqual([[]])
 
   $.counter.set(5)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect(spy.mock.calls).toEqual([[], []])
 })
@@ -67,8 +64,6 @@ test('.use()', () => {
 
     return { counter }
   })
-
-  assertWith<StoreInternals>($)
 
   const spy = vi.fn()
 
@@ -83,7 +78,7 @@ test('.use()', () => {
 
   act(() => {
     $.counter.set(20)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(spy).toHaveBeenCalledTimes(2)
@@ -109,15 +104,13 @@ test('.use() with custom selector', () => {
     return { a }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls = makeHookCallSpy(() => $.a.use((x) => x + 5))
 
   expect(calls()).toEqual([[15]])
 
   act(() => {
     $.a.set(11)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[15], [16]])
@@ -142,22 +135,20 @@ test('.use() with custom selector that access another atom', () => {
     return { a, b }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls = makeHookCallSpy(() => $.a.use((x) => x + $.b.get()))
 
   expect(calls()).toEqual([[110]])
 
   act(() => {
     $.a.set(11)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[110], [111]])
 
   act(() => {
     $.b.set(200)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[110], [111], [211]])
@@ -199,18 +190,16 @@ test('anonymous atom', () => {
     return { getA, setA }
   })
 
-  assertWith<StoreInternals>($)
-
   expect($.getA()).toBe(1)
-  expect($.getInternals().getStored().getAll()).toEqual({
+  expect(pubsub.getAll()).toEqual({
     'anon-0': 1,
   })
 
   $.setA(2)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect($.getA()).toBe(2)
-  expect($.getInternals().getStored().getAll()).toEqual({
+  expect(pubsub.getAll()).toEqual({
     'anon-0': 2,
   })
 })
@@ -249,12 +238,10 @@ test('.with() set middleware', () => {
     return { a }
   })
 
-  assertWith<StoreInternals>($)
-
   expect($.a.get()).toBe('a')
 
   $.a.set('b')
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect($.a.get()).toBe('ab')
 })
@@ -283,12 +270,10 @@ test('.with() chaining middleware', () => {
     return { a }
   })
 
-  assertWith<StoreInternals>($)
-
   expect($.a.get()).toBe('a')
 
   $.a.set('b')
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect($.a.get()).toBe('abb')
 })

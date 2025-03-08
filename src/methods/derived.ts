@@ -1,5 +1,6 @@
 import { assertWith } from '../../test/utils'
 import { callAndTrackDeps } from '../misc/deps'
+import { pubsub } from '../misc/pubsub'
 import { Atom, atom, AtomInternals } from './atom'
 import { onInit } from './onInit'
 
@@ -33,7 +34,7 @@ export type Derived<TValue> = Omit<Atom<TValue>, 'set'>
 export const derived = <TValue>(fn: (...args: any[]) => TValue) => {
   const target = atom<TValue>(undefined!)
 
-  onInit(({ subKeys, setKeyInitialValue }) => {
+  onInit(() => {
     const { value, depsList } = callAndTrackDeps(
       { trackDeps: true, errorOnAlreadyTrackingDeps: true },
       fn,
@@ -42,13 +43,13 @@ export const derived = <TValue>(fn: (...args: any[]) => TValue) => {
     assertWith<AtomInternals>(target)
     const internals = target.getInternals()
 
-    setKeyInitialValue(internals.name, value)
+    pubsub.setKeyInitialValue(internals.name, value)
 
     if (!depsList) {
       return
     }
 
-    return subKeys(depsList, () => {
+    return pubsub.subKeys(depsList, () => {
       target.set(fn())
     })
   })

@@ -1,6 +1,6 @@
-export const pubsub = () => {
+const makePubsub = () => {
   let stored = {} as Record<string, any>
-  const listeners = {} as Record<string, ((value: any) => void)[]>
+  let listeners = {} as Record<string, ((value: any) => void)[]>
 
   let pendingUpdates: Record<string, any> | undefined
   let applyPromise: Promise<void> | undefined
@@ -21,7 +21,6 @@ export const pubsub = () => {
     const keys = Object.keys(pendingUpdates)
 
     pendingUpdates = undefined
-    applyPromise
     applyPromise = undefined
 
     const dedupedListeners = [
@@ -55,6 +54,7 @@ export const pubsub = () => {
 
       pendingUpdates = {}
       applyPromise = new Promise((resolve) => setTimeout(resolve, 0))
+      applyPromise.then(flush)
     }
 
     pendingUpdates[key] = value
@@ -88,6 +88,13 @@ export const pubsub = () => {
     }
   }
 
+  const reset = () => {
+    stored = {}
+    listeners = {}
+    pendingUpdates = undefined
+    applyPromise = undefined
+  }
+
   let anonCounter = 0
   const getAnonName = () => `anon-${anonCounter++}`
 
@@ -103,5 +110,8 @@ export const pubsub = () => {
     getListeners,
     flush,
     getAnonName,
+    reset,
   }
 }
+
+export const pubsub = makePubsub()

@@ -6,6 +6,7 @@ import { assertWith, makeHookCallSpy } from '../utils'
 import React, { useState } from 'react'
 import { StoreInternals } from '../../src/methods/store'
 import { Group } from '../../src/methods/group'
+import { pubsub } from '../../src/misc/pubsub'
 
 test('group with nested atom', () => {
   const $ = store(() => {
@@ -18,17 +19,15 @@ test('group with nested atom', () => {
     return { canvas }
   })
 
-  assertWith<StoreInternals>($)
-
-  expect($.getInternals().getStored().getAll()).toEqual({
-    'canvas.nodeCount': 10,
+  expect(pubsub.getAll()).toEqual({
+    '$.canvas.nodeCount': 10,
   })
 
   $.canvas.nodeCount.set(20)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
-  expect($.getInternals().getStored().getAll()).toEqual({
-    'canvas.nodeCount': 20,
+  expect(pubsub.getAll()).toEqual({
+    '$.canvas.nodeCount': 20,
   })
 })
 
@@ -50,23 +49,21 @@ test('nested groups with atoms', () => {
     return { a, b }
   })
 
-  assertWith<StoreInternals>($)
-
-  expect($.getInternals().getStored().getAll()).toEqual({
-    a: 1,
-    'b.c': 2,
-    'b.d.e': 3,
+  expect(pubsub.getAll()).toEqual({
+    '$.a': 1,
+    '$.b.c': 2,
+    '$.b.d.e': 3,
   })
 
   $.a.set(4)
   $.b.c.set(5)
   $.b.d.e.set(6)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
-  expect($.getInternals().getStored().getAll()).toEqual({
-    a: 4,
-    'b.c': 5,
-    'b.d.e': 6,
+  expect(pubsub.getAll()).toEqual({
+    '$.a': 4,
+    '$.b.c': 5,
+    '$.b.d.e': 6,
   })
 })
 
@@ -82,22 +79,20 @@ test('group.pick() is fine-grained', () => {
     return { $group }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls = makeHookCallSpy(() => $.$group.pick(['a']).use())
 
   expect(calls()).toEqual([[{ a: 1 }]])
 
   act(() => {
     $.$group.a.set(3)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[{ a: 1 }], [{ a: 3 }]])
 
   act(() => {
     $.$group.b.set(4)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[{ a: 1 }], [{ a: 3 }]])
@@ -115,8 +110,6 @@ test('separate group.pick() calls on the same group have separate deps', () => {
     return { $group }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls1 = makeHookCallSpy(() => $.$group.pick(['a']).use())
   const calls2 = makeHookCallSpy(() => $.$group.pick(['b']).use())
 
@@ -125,7 +118,7 @@ test('separate group.pick() calls on the same group have separate deps', () => {
 
   act(() => {
     $.$group.a.set(3)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls1()).toEqual([[{ a: 1 }], [{ a: 3 }]])
@@ -133,7 +126,7 @@ test('separate group.pick() calls on the same group have separate deps', () => {
 
   act(() => {
     $.$group.b.set(4)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls1()).toEqual([[{ a: 1 }], [{ a: 3 }]])
@@ -148,22 +141,20 @@ test('store.pick()', () => {
     return { a, b }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls = makeHookCallSpy(() => $.pick(['a']).use())
 
   expect(calls()).toEqual([[{ a: 1 }]])
 
   act(() => {
     $.a.set(3)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[{ a: 1 }], [{ a: 3 }]])
 
   act(() => {
     $.b.set(4)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls()).toEqual([[{ a: 1 }], [{ a: 3 }]])
@@ -193,13 +184,11 @@ test('group.with() middleware on all atoms', () => {
     return { $group }
   })
 
-  assertWith<StoreInternals>($)
-
   expect($.$group.a.get()).toBe(1)
   expect($.$group.b.get()).toBe(1)
 
   $.$group.a.set(2)
-  $.getInternals().getStored().flush()
+  pubsub.flush()
 
   expect($.$group.a.get()).toBe(3)
   expect($.$group.b.get()).toBe(1)
@@ -220,8 +209,6 @@ test('group.get()', () => {
 
     return { $group }
   })
-
-  assertWith<StoreInternals>($)
 
   expect($.get()).toEqual({ $group: { a: 1, b: 2, $inner: { d: 4 } } })
   expect($.$group.get()).toEqual({ a: 1, b: 2, $inner: { d: 4 } })
@@ -244,8 +231,6 @@ test('group.use()', () => {
     return { $group }
   })
 
-  assertWith<StoreInternals>($)
-
   const calls1 = makeHookCallSpy(() => $.use())
   const calls2 = makeHookCallSpy(() => $.$group.use())
   const calls3 = makeHookCallSpy(() => $.$group.$inner.use())
@@ -256,7 +241,7 @@ test('group.use()', () => {
 
   act(() => {
     $.$group.b.set(5)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
   })
 
   expect(calls1()).toEqual([

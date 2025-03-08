@@ -1,5 +1,4 @@
 import { getCurrentStoreRef } from '../misc/currentStore'
-import { Handles } from '../misc/setup'
 
 /**
  * Runs the specified function after the whole store has been initialized.
@@ -18,7 +17,7 @@ import { Handles } from '../misc/setup'
  * })
  * ```
  */
-export const onInit = (fn: (handles: Handles) => void) => {
+export const onInit = (fn: () => void) => {
   const currentStore = getCurrentStoreRef().current
 
   if (!currentStore) {

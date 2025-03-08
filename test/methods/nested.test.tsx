@@ -4,6 +4,7 @@ import { store, atom, select, nested } from '../../src/index'
 import { assertWith, makeHookCallSpy } from '../utils'
 import { act } from 'react'
 import { StoreInternals } from '../../src/methods/store'
+import { pubsub } from '../../src/misc/pubsub'
 
 describe('nested on select', () => {
   test('select.get()', () => {
@@ -24,13 +25,11 @@ describe('nested on select', () => {
       return { counter, double }
     })
 
-    assertWith<StoreInternals>($)
-
     expect($.double().get()).toBe(10)
     expect($.double().doubleAgain().get()).toBe(20)
 
     $.counter.set(10)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
 
     expect($.double().get()).toBe(20)
     expect($.double().doubleAgain().get()).toBe(40)
@@ -52,13 +51,11 @@ describe('nested on select', () => {
       return { counter, mult }
     })
 
-    assertWith<StoreInternals>($)
-
     expect($.mult(10).get()).toBe(50)
     expect($.mult(10).add(10).get()).toBe(60)
 
     $.counter.set(10)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
 
     expect($.mult(10).get()).toBe(100)
     expect($.mult(10).add(10).get()).toBe(110)
@@ -80,8 +77,6 @@ describe('nested on select', () => {
       return { counter, double }
     })
 
-    assertWith<StoreInternals>($)
-
     const calls1 = makeHookCallSpy(() => $.double().use())
     const calls2 = makeHookCallSpy(() => $.double().doubleAgain().use())
 
@@ -90,7 +85,7 @@ describe('nested on select', () => {
 
     act(() => {
       $.counter.set(10)
-      $.getInternals().getStored().flush()
+      pubsub.flush()
     })
 
     expect(calls1()).toEqual([[10], [20]])
@@ -110,13 +105,11 @@ describe('nested on atom', () => {
       return { counter }
     })
 
-    assertWith<StoreInternals>($)
-
     expect($.counter.get()).toBe(5)
     expect($.counter.double().get()).toBe(10)
 
     $.counter.set(10)
-    $.getInternals().getStored().flush()
+    pubsub.flush()
 
     expect($.counter.get()).toBe(10)
     expect($.counter.double().get()).toBe(20)
@@ -133,8 +126,6 @@ describe('nested on atom', () => {
       return { counter }
     })
 
-    assertWith<StoreInternals>($)
-
     const calls1 = makeHookCallSpy(() => $.counter.use())
     const calls2 = makeHookCallSpy(() => $.counter.double().use())
 
@@ -143,7 +134,7 @@ describe('nested on atom', () => {
 
     act(() => {
       $.counter.set(10)
-      $.getInternals().getStored().flush()
+      pubsub.flush()
     })
 
     expect(calls1()).toEqual([[5], [10]])

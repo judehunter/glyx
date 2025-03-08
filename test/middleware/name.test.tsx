@@ -6,6 +6,7 @@ import { StoreInternals } from '../../src/methods/store'
 import { atom } from '../../src/methods/atom'
 import { omit } from '../../src/middleware/omit'
 import { name } from '../../src/middleware/name'
+import { pubsub } from '../../src/misc/pubsub'
 
 test('omit method from atom', () => {
   const $ = store(() => {
@@ -14,9 +15,7 @@ test('omit method from atom', () => {
     return {}
   })
 
-  assertWith<StoreInternals>($)
-
-  expect($.getInternals().getStored().getAll()).toEqual({
+  expect(pubsub.getAll()).toEqual({
     foo: 1,
   })
 })
