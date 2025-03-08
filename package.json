@@ -7,14 +7,12 @@
   "keywords": [
     "state manager",
     "react",
-    "preact",
-    "svelte",
     "atomic",
     "state",
     "declarative"
   ],
   "scripts": {
-    "test": "vitest",
+    "test": "vitest watch --dir=test",
     "build": "tsc --project tsconfig.build.json"
   },
   "sideEffects": false,
