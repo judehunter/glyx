@@ -4,6 +4,8 @@ export { group } from './methods/group'
 export { select } from './methods/select'
 export { nested } from './methods/nested'
 export { derived } from './methods/derived'
+export { watch } from './methods/watch'
+export { onInit } from './methods/onInit'
 
 /*
 todo:
@@ -47,6 +49,11 @@ X batch updates because of stuff like watch (multiple listeneres that will run t
 - batching with Promise done, but maybe could be better for derived, so that it runs before other listeners?
 todo: flushing could also be done on only some changes (using a callback), since we can track and remove the pending changes
 
+add onInit to all atoms, selects, etc. that checks if they have been initialized, and if not, error out. alternatively, register the atom then, to allow atoms that are not returned but still work? the problem is that using methods outside of a store wouldn't be allowed (maybe that's fine - just use a factory for them)
+
+remove values from pending updates that are identical? what about eqfn?
+
+function to wrap dependencies that should not be tracked (akin to solid)
 */
 
 /*

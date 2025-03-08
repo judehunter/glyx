@@ -2,8 +2,9 @@ import { expect, vi } from 'vitest'
 import { test } from 'vitest'
 import { store, atom, group, select, nested } from '../src/index'
 import { act, render, renderHook } from '@testing-library/react'
-import { makeHookCallSpy } from './utils'
+import { assertWith, makeHookCallSpy } from './utils'
 import React, { useState } from 'react'
+import { StoreInternals } from '../src/methods/store'
 
 test('group with nested atom', () => {
   const $ = store(() => {
@@ -16,14 +17,16 @@ test('group with nested atom', () => {
     return { canvas }
   })
 
-  expect($._glyxTest().stored.getAll()).toEqual({
+  assertWith<StoreInternals>($)
+
+  expect($._glyx.getStored().getAll()).toEqual({
     'canvas.nodeCount': 10,
   })
 
   $.canvas.nodeCount.set(20)
-  $._glyxTest().stored.flush()
+  $._glyx.getStored().flush()
 
-  expect($._glyxTest().stored.getAll()).toEqual({
+  expect($._glyx.getStored().getAll()).toEqual({
     'canvas.nodeCount': 20,
   })
 })
@@ -46,7 +49,9 @@ test('nested groups with atoms', () => {
     return { a, b }
   })
 
-  expect($._glyxTest().stored.getAll()).toEqual({
+  assertWith<StoreInternals>($)
+
+  expect($._glyx.getStored().getAll()).toEqual({
     a: 1,
     'b.c': 2,
     'b.d.e': 3,
@@ -55,11 +60,73 @@ test('nested groups with atoms', () => {
   $.a.set(4)
   $.b.c.set(5)
   $.b.d.e.set(6)
-  $._glyxTest().stored.flush()
+  $._glyx.getStored().flush()
 
-  expect($._glyxTest().stored.getAll()).toEqual({
+  expect($._glyx.getStored().getAll()).toEqual({
     a: 4,
     'b.c': 5,
     'b.d.e': 6,
   })
+})
+
+test('group.pick() is fine-grained', () => {
+  const $ = store(() => {
+    const $group = group(() => {
+      const a = atom(1)
+      const b = atom(2)
+
+      return { a, b }
+    })
+
+    return { $group }
+  })
+
+  assertWith<StoreInternals>($)
+
+  const calls = makeHookCallSpy(() => $.$group.pick(['a']).use())
+
+  expect(calls()).toEqual([[{ a: 1 }]])
+
+  act(() => {
+    $.$group.a.set(3)
+    $._glyx.getStored().flush()
+  })
+
+  expect(calls()).toEqual([[{ a: 1 }], [{ a: 3 }]])
+
+  act(() => {
+    $.$group.b.set(4)
+    $._glyx.getStored().flush()
+  })
+
+  expect(calls()).toEqual([[{ a: 1 }], [{ a: 3 }]])
+})
+
+test('store.pick()', () => {
+  const $ = store(() => {
+    const a = atom(1)
+    const b = atom(2)
+
+    return { a, b }
+  })
+
+  assertWith<StoreInternals>($)
+
+  const calls = makeHookCallSpy(() => $.pick(['a']).use())
+
+  expect(calls()).toEqual([[{ a: 1 }]])
+
+  act(() => {
+    $.a.set(3)
+    $._glyx.getStored().flush()
+  })
+
+  expect(calls()).toEqual([[{ a: 1 }], [{ a: 3 }]])
+
+  act(() => {
+    $.b.set(4)
+    $._glyx.getStored().flush()
+  })
+
+  expect(calls()).toEqual([[{ a: 1 }], [{ a: 3 }]])
 })

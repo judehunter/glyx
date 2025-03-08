@@ -3,8 +3,12 @@ import { pushToDepsListIfTracking } from '../misc/deps'
 import { runCustomSelector } from '../misc/runCustomSelector'
 import { useSyncExternalStoreWithSelector } from '../misc/useSyncExternalStoreWithSelector'
 import { identity, uniqueDeps } from '../misc/utils'
+import { Brand } from '../misc/brand'
 
 export type Atom<TValue = unknown> = {
+  /**
+   * hello
+   */
   get<TCustomSelected = TValue>(
     customSelector?: (value: TValue) => TCustomSelected,
   ): TCustomSelected
@@ -34,6 +38,8 @@ export type AtomInternals = {
     set(value: unknown): void
   }
 }
+
+// export type AtomBrand = Brand<'atom'>
 
 export type AtomType<TAtom extends Atom> = TAtom extends Atom<infer TValue>
   ? TValue
@@ -96,22 +102,48 @@ const makeSet = (target: Atom & AtomInternals) => (value: any) => {
   target._glyx.set(value)
 }
 
+/**
+ * Creates an atom with the given initial value. The atom's value
+ * is persisted within the store.
+ *
+ * Usage:
+ *
+ * ```tsx
+ * const $ = store(() => {
+ *   const foo = atom(1)
+ *   return { foo }
+ * })
+ *
+ * $.foo.get()
+ * $.foo.get(x => x * 2) // with an inline selector
+ * $.foo.use() // in a component
+ * $.foo.use(x => x * 2, [eqFn]) // in a component, with an inline selector
+ * $.foo.set(2)
+ * ```
+ *
+ * Do not use `.get()` directly inside store, only in a callback,
+ * such as inside a `select`, `derived` or `onInit`. This is because the atom
+ * needs to be initialized before it can be used, which happens after
+ * it is returned from the store.
+ *
+ * @param initialValue - The initial value of the atom.
+ */
 export const atom = <TValue>(initialValue: TValue) => {
   const target = {
     _glyx: { type: 'atom', initialValue } as AtomInternals['_glyx'],
 
     get: (...pass: Parameters<ReturnType<typeof makeGet>>) =>
-      makeGet(target)(...pass),
+      makeGet(target as any)(...pass),
 
     use: (...pass: Parameters<ReturnType<typeof makeUse>>) =>
-      makeUse(target)(...pass),
+      makeUse(target as any)(...pass),
 
     sub: (...pass: Parameters<ReturnType<typeof makeSub>>) =>
-      makeSub(target)(...pass),
+      makeSub(target as any)(...pass),
 
     set: (...pass: Parameters<ReturnType<typeof makeSet>>) =>
-      makeSet(target)(...pass),
-  } satisfies Atom<TValue> & AtomInternals
+      makeSet(target as any)(...pass),
+  }
 
-  return target as Atom<TValue>
+  return target as any as Atom<TValue>
 }

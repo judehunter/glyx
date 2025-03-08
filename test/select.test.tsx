@@ -2,8 +2,10 @@ import { expect, vi } from 'vitest'
 import { test } from 'vitest'
 import { store, atom, group, select, nested } from '../src/index'
 import { act, render, renderHook } from '@testing-library/react'
-import { makeHookCallSpy } from './utils'
+import { assertWith, makeHookCallSpy } from './utils'
 import React, { useState } from 'react'
+import { StoreInternals } from '../src/methods/store'
+import { SelectInternals } from '../src/methods/select'
 
 test('select.get() with atom as dependency', () => {
   const $ = store(() => {
@@ -14,7 +16,10 @@ test('select.get() with atom as dependency', () => {
     return { counter, double }
   })
 
-  expect($._glyxTest().stored.getAll()).toEqual({
+  assertWith<StoreInternals>($)
+  assertWith<SelectInternals>($.double)
+
+  expect($._glyx.getStored().getAll()).toEqual({
     counter: 10,
   })
 
@@ -24,7 +29,7 @@ test('select.get() with atom as dependency', () => {
   expect($.double._glyx.depsList).toEqual(['counter'])
 
   $.counter.set(20)
-  $._glyxTest().stored.flush()
+  $._glyx.getStored().flush()
 
   expect($.double().get()).toBe(40)
 })
@@ -40,7 +45,10 @@ test('select.get() with transitive dependency of another select', () => {
     return { counter, double, quadruple }
   })
 
-  expect($._glyxTest().stored.getAll()).toEqual({
+  assertWith<StoreInternals>($)
+  assertWith<SelectInternals>($.double)
+  assertWith<SelectInternals>($.quadruple)
+  expect($._glyx.getStored().getAll()).toEqual({
     counter: 10,
   })
 
@@ -58,7 +66,7 @@ test('select.get() with transitive dependency of another select', () => {
   expect($.quadruple._glyx.depsList).toEqual(['counter'])
 
   $.counter.set(20)
-  $._glyxTest().stored.flush()
+  $._glyx.getStored().flush()
 
   expect($.double().get()).toBe(40)
   expect($.quadruple().get()).toBe(80)
@@ -73,13 +81,15 @@ test('select.use() with atom as dependency', () => {
     return { counter, double }
   })
 
+  assertWith<StoreInternals>($)
+
   const calls = makeHookCallSpy(() => $.double().use())
 
   expect(calls()).toEqual([[20]])
 
   act(() => {
     $.counter.set(20)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls()).toEqual([[20], [40]])
@@ -96,6 +106,8 @@ test('select.use() with transitive dependency of another select', () => {
     return { counter, double, quadruple }
   })
 
+  assertWith<StoreInternals>($)
+
   const calls1 = makeHookCallSpy(() => $.double().use())
   const calls2 = makeHookCallSpy(() => $.quadruple().use())
 
@@ -104,7 +116,7 @@ test('select.use() with transitive dependency of another select', () => {
 
   act(() => {
     $.counter.set(20)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls1()).toEqual([[20], [40]])
@@ -120,11 +132,13 @@ test('select.get() with selector args', () => {
     return { counter, multi }
   })
 
+  assertWith<StoreInternals>($)
+
   expect($.multi(2).get()).toBe(20)
   expect($.multi(3).get()).toBe(30)
 
   $.counter.set(20)
-  $._glyxTest().stored.flush()
+  $._glyx.getStored().flush()
 
   expect($.multi(2).get()).toBe(40)
   expect($.multi(3).get()).toBe(60)
@@ -139,11 +153,13 @@ test('select.use() with selector args', () => {
     return { counter, multi }
   })
 
+  assertWith<StoreInternals>($)
+
   const calls = makeHookCallSpy(() => $.multi(2).use())
 
   act(() => {
     $.counter.set(20)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls()).toEqual([[20], [40]])
@@ -159,15 +175,17 @@ test('select.get() with two atoms as dependencies', () => {
     return { a, b, c }
   })
 
+  assertWith<StoreInternals>($)
+
   expect($.c().get()).toBe(11)
 
   $.a.set(2)
-  $._glyxTest().stored.flush()
+  $._glyx.getStored().flush()
 
   expect($.c().get()).toBe(12)
 
   $.b.set(20)
-  $._glyxTest().stored.flush()
+  $._glyx.getStored().flush()
 
   expect($.c().get()).toBe(22)
 })
@@ -182,20 +200,22 @@ test('select.use() with two atoms as dependencies', () => {
     return { a, b, c }
   })
 
+  assertWith<StoreInternals>($)
+
   const calls = makeHookCallSpy(() => $.c().use())
 
   expect(calls()).toEqual([[11]])
 
   act(() => {
     $.a.set(2)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls()).toEqual([[11], [12]])
 
   act(() => {
     $.b.set(20)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls()).toEqual([[11], [12], [22]])
@@ -224,11 +244,13 @@ test('select.get() with custom selector that accesses another atom', () => {
     return { a, b, mult }
   })
 
+  assertWith<StoreInternals>($)
+
   expect($.mult(2).get()).toBe(20)
   expect($.mult(2).get((x) => x + 5 + $.b.get())).toBe(125)
 
   $.a.set(11)
-  $._glyxTest().stored.flush()
+  $._glyx.getStored().flush()
 
   expect($.mult(2).get((x) => x + 5 + $.b.get())).toBe(127)
 })
@@ -241,6 +263,7 @@ test('select.use() with custom selector', () => {
 
     return { a, mult }
   })
+  assertWith<StoreInternals>($)
 
   const calls = makeHookCallSpy(() => $.mult(2).use((x) => x + 5))
 
@@ -248,7 +271,7 @@ test('select.use() with custom selector', () => {
 
   act(() => {
     $.a.set(11)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls()).toEqual([[25], [27]])
@@ -264,20 +287,22 @@ test('select.use() with custom selector that accesses another atom', () => {
     return { a, b, mult }
   })
 
+  assertWith<StoreInternals>($)
+
   const calls = makeHookCallSpy(() => $.mult(2).use((x) => x + $.b.get()))
 
   expect(calls()).toEqual([[120]])
 
   act(() => {
     $.a.set(11)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls()).toEqual([[120], [122]])
 
   act(() => {
     $.b.set(200)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls()).toEqual([[120], [122], [222]])
@@ -293,6 +318,8 @@ test('select.use() tracks deps of selector and custom selector independently', (
     return { a, b, c }
   })
 
+  assertWith<StoreInternals>($)
+
   const c = $.c()
 
   const calls1 = makeHookCallSpy(() => c.use())
@@ -303,7 +330,7 @@ test('select.use() tracks deps of selector and custom selector independently', (
 
   act(() => {
     $.a.set(2)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls1()).toEqual([[2], [4]])
@@ -311,7 +338,7 @@ test('select.use() tracks deps of selector and custom selector independently', (
 
   act(() => {
     $.b.set(20)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls1()).toEqual([[2], [4]])
@@ -354,8 +381,6 @@ test('select.use() with custom selector closing over component state', () => {
 
     return { a, plusOne }
   })
-
-  $.plusOne().
 
   const spy = vi.fn()
 

@@ -1,6 +1,29 @@
 import { getCurrentStoreRef } from '../misc/currentStore'
 import { onInit } from './onInit'
 
+/**
+ * Runs the callback function whenever any of the dependencies change.
+ *
+ * Should not be returned.
+ *
+ * Usage:
+ *
+ * ```tsx
+ * const $ = store(() => {
+ *   const a = atom(1)
+ *   const b = atom(2)
+ *
+ *   watch([a, b], () => {
+ *     console.log('a or b changed')
+ *   })
+ *
+ *   return { a, b }
+ * })
+ * ```
+ *
+ * @param deps - The dependencies to watch. NOTE: atoms (and derived atoms) only!
+ * @param fn - The callback function to run when the dependencies change.
+ */
 export const watch = (deps: any[], fn: () => void) => {
   onInit(({ sub }) => {
     let toSub = [] as string[]

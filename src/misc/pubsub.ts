@@ -36,7 +36,8 @@ export const pubsub = () => {
   }
 
   const flush = () => {
-    if (pendingUpdates) {
+    // applyUpdates might add more updates
+    while (pendingUpdates) {
       applyUpdates()
     }
   }

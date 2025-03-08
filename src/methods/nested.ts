@@ -1,9 +1,11 @@
+import { Brand } from '../misc/brand'
 import { setupGroup } from '../misc/setup'
 import { attachObjToFn, makeKey } from '../misc/utils'
 import { atom, Atom } from './atom'
 import { CalledSelect, Select, select, SelectInternals } from './select'
 
-type NestedOnAtom = any
+// TODO:
+// type NestedOnAtom<TValue, TNested> = Atom<TValue> & TNested
 
 const nestedOnSelect = (
   select: Select<any, any> & SelectInternals,
@@ -39,9 +41,7 @@ const nestedOnSelect = (
 
 const nestedOnAtom = (
   atom: Atom,
-  nestedDef: (
-    selectObj: ReturnType<ReturnType<typeof select>>,
-  ) => Record<string, any>,
+  nestedDef: (atomObj: Atom) => Record<string, any>,
 ) => {
   return Object.assign(atom, nestedDef(atom))
 }
@@ -56,6 +56,43 @@ function nested<TValue, TNested>(
   nestedDef: (atom: NoInfer<Atom<TValue>>) => TNested,
 ): Atom<TValue> & TNested
 
+/**
+ * Attaches a nested group directly to a select or an atom.
+ *
+ * In addition, when attaching to a select,
+ * the nested group has access to that select's value for some given arguments,
+ * which allows a pattern of partial application for selects.
+ *
+ * Comparison:
+ * ```ts
+ * const $group = group(() => {
+ *   const a = atom(1)
+ *   return { a }
+ * })
+ * $.$group.a.get()
+ * $.$group.a.use()
+ * $.$group.a.set()
+ * $.$group.pick(['a']).get()
+ * $.$group.pick(['a']).use()
+ * $.$group.pick(['a']).set()
+ *
+ * const a = nested(
+ *   atom(1),
+ *   (group) => {
+ *     const double = select(() => group.a.get() * 2)
+ *     return { double }
+ *   }
+ * )
+ * a.get()
+ * a.use()
+ * a.set()
+ * // the group lives directly on the atom.
+ * a.double.get()
+ * a.double.use()
+ * ```
+ *
+ * Note that supporting `pick` in `nested` is not yet implemented.
+ */
 function nested(selectOrAtom: Select<any, any> | Atom, nestedDef: unknown) {
   if ((selectOrAtom as any)._glyx.type === 'select') {
     return nestedOnSelect(selectOrAtom as any, nestedDef as any)

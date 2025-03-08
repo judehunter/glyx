@@ -1,6 +1,23 @@
 import { getCurrentStoreRef } from '../misc/currentStore'
 import { Handles } from '../misc/setup'
 
+/**
+ * Runs the specified function after the whole store has been initialized.
+ *
+ * Should not be returned.
+ *
+ * Usage:
+ * ```ts
+ * const $ = store(() => {
+ *   const a = atom(1)
+ *   // a.get() is not allowed here!
+ *   onInit(() => {
+ *     // a.get() is allowed here!
+ *   })
+ *   return { a }
+ * })
+ * ```
+ */
 export const onInit = (fn: (handles: Handles) => void) => {
   const currentStore = getCurrentStoreRef().current
 

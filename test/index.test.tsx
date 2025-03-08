@@ -2,8 +2,9 @@ import { expect, vi } from 'vitest'
 import { test } from 'vitest'
 import { store, atom, group, select, nested } from '../src/index'
 import { act, render, renderHook } from '@testing-library/react'
-import { makeHookCallSpy } from './utils'
+import { assertWith, makeHookCallSpy } from './utils'
 import React, { useState } from 'react'
+import { StoreInternals } from '../src/methods/store'
 
 test('isolated updates with dependency tracking', () => {
   const $ = store(() => {
@@ -15,6 +16,8 @@ test('isolated updates with dependency tracking', () => {
     return { a, b, c }
   })
 
+  assertWith<StoreInternals>($)
+
   const calls1 = makeHookCallSpy(() => $.a.use())
   const calls2 = makeHookCallSpy(() => $.b.use())
   const calls3 = makeHookCallSpy(() => $.c().use())
@@ -25,7 +28,7 @@ test('isolated updates with dependency tracking', () => {
 
   act(() => {
     $.a.set(2)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls1()).toEqual([[1], [2]])
@@ -34,7 +37,7 @@ test('isolated updates with dependency tracking', () => {
 
   act(() => {
     $.b.set(20)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls1()).toEqual([[1], [2]])
@@ -47,6 +50,8 @@ test('no zombie child problem', () => {
     const elems = atom([10, 20])
     return { elems }
   })
+
+  assertWith<StoreInternals>($)
 
   const spyChild0 = vi.fn()
   const spyChild1 = vi.fn()
@@ -84,7 +89,7 @@ test('no zombie child problem', () => {
 
   act(() => {
     $.elems.set([11])
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(spyChild0.mock.calls).toEqual([[10], [11]])
@@ -100,6 +105,8 @@ test('no infinite loop with custom selector that returns an unstable reference',
     return { a, b }
   })
 
+  assertWith<StoreInternals>($)
+
   const calls1 = makeHookCallSpy(() => $.a.use((x) => ({ x })))
   const calls2 = makeHookCallSpy(() => $.b().use((x) => ({ x })))
 
@@ -108,7 +115,7 @@ test('no infinite loop with custom selector that returns an unstable reference',
 
   act(() => {
     $.a.set(2)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls1()).toEqual([[{ x: 1 }], [{ x: 2 }]])
@@ -122,6 +129,8 @@ test('component unsubscribes', () => {
     return { a, b }
   })
 
+  assertWith<StoreInternals>($)
+
   const Comp = () => {
     $.a.use()
     $.b().use()
@@ -130,11 +139,11 @@ test('component unsubscribes', () => {
 
   const { unmount } = render(<Comp />)
 
-  expect($._glyxTest().stored.getListeners().a).toHaveLength(2)
+  expect($._glyx.getStored().getListeners().a).toHaveLength(2)
 
   unmount()
 
-  expect($._glyxTest().stored.getListeners().a).toHaveLength(0)
+  expect($._glyx.getStored().getListeners().a).toHaveLength(0)
 })
 
 // this is handled by React, not Glyx
@@ -146,6 +155,8 @@ test('updates are batched', () => {
     return { a, b, c }
   })
 
+  assertWith<StoreInternals>($)
+
   const calls = makeHookCallSpy(() => $.c().use())
 
   expect(calls()).toEqual([[3]])
@@ -153,7 +164,7 @@ test('updates are batched', () => {
   act(() => {
     $.a.set(3)
     $.b.set(4)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls()).toEqual([[3], [7]])
@@ -166,13 +177,15 @@ test('action inside store', () => {
     return { a, increment }
   })
 
+  assertWith<StoreInternals>($)
+
   const calls = makeHookCallSpy(() => $.a.use())
 
   expect(calls()).toEqual([[1]])
 
   act(() => {
     $.increment()
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls()).toEqual([[1], [2]])
@@ -184,6 +197,8 @@ test('selectors are not called when something else updates', () => {
     const b = atom(2)
     return { a, b }
   })
+
+  assertWith<StoreInternals>($)
 
   const spy = vi.fn()
   const calls = makeHookCallSpy(() =>
@@ -197,7 +212,7 @@ test('selectors are not called when something else updates', () => {
 
   act(() => {
     $.b.set(3)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls()).toEqual([[1]])
@@ -224,6 +239,8 @@ test('advanced use case', () => {
     return { $user, $canvas }
   })
 
+  assertWith<StoreInternals>($)
+
   const calls = makeHookCallSpy(() => $.$canvas.pick(['edges', 'nodes']).use())
 
   expect(calls()).toEqual([
@@ -238,7 +255,7 @@ test('advanced use case', () => {
   act(() => {
     $.$canvas.nodes.set([])
     $.$canvas.edges.set([])
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls()).toEqual([

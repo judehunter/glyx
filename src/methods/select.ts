@@ -3,8 +3,7 @@ import { callAndTrackDeps } from '../misc/deps'
 import { runCustomSelector } from '../misc/runCustomSelector'
 import { useSyncExternalStoreWithSelector } from '../misc/useSyncExternalStoreWithSelector'
 import { attachObjToFn, identity, uniqueDeps } from '../misc/utils'
-
-export declare const _glyxSelect: unique symbol
+import { Brand } from '../misc/brand'
 
 export type CalledSelect<TSelected = unknown, TNested = {}> = {
   get<TCustomSelected = TSelected>(
@@ -14,7 +13,7 @@ export type CalledSelect<TSelected = unknown, TNested = {}> = {
     customSelector?: (value: TSelected) => TCustomSelected,
   ): TCustomSelected
   sub(listener: (value: TSelected) => void): () => void
-} & TNested & { [_glyxSelect]: void }
+} & TNested
 
 export type Select<TParams extends any[], TReturn> = (
   ...args: TParams
@@ -33,6 +32,8 @@ export type SelectInternals = {
     ) => () => void
   }
 }
+
+// export type SelectBrand = (...args: any[]) => Brand<'select'>
 
 const makeGet =
   (
@@ -106,6 +107,35 @@ const makeSub =
     throw new Error('sub is not implemented for select')
   }
 
+/**
+ * Creates a predefined selector that tracks its atom dependencies.
+ * Selectors will only be recalculated if at least one of their
+ * dependencies has changed. They will never be notified when
+ * irrelevant atoms change.
+ *
+ * Notice that just like with an atom, you can pass a
+ * selector to `.get()` or `.use()`, which further allows you to
+ * narrow down the value in your component, including using component state.
+ * That second selector (called "inline selector") will be called
+ * with the return value of the first selector (which is defined in the store)
+ *
+ * Usage:
+ * ```ts
+ * const $ = store(() => {
+ *   const counter = atom(1)
+ *   const double = select(() => counter.get() * 2)
+ *   return { double }
+ * })
+ *
+ * // in comparison to atoms, selects are functions that must be called.
+ * $.double().get()
+ * $.double().get(x => x * 2) // with an inline selector
+ * $.double().use() // in a component
+ * $.double().use(x => x * 2, [eqFn]) // in a component, with an inline selector
+ * ```
+ *
+ * Currently, selects do not support set methods.
+ */
 export const select = <TParams extends any[], TReturn>(
   selector: (...args: TParams) => TReturn,
 ) => {

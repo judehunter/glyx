@@ -10,3 +10,6 @@ export const makeHookCallSpy = <T>(hook: () => T) => {
   })
   return () => fn.mock.calls
 }
+
+export function assertWith<TWith>(obj: any): asserts obj is TWith {
+}

@@ -1,7 +1,8 @@
 import { expect, test, vi } from 'vitest'
 import { atom, derived, select, store } from '../src/index'
-import { makeHookCallSpy } from './utils'
+import { assertWith, makeHookCallSpy } from './utils'
 import { act } from '@testing-library/react'
+import { StoreInternals } from '../src/methods/store'
 
 test('derived.get()', () => {
   const $ = store(() => {
@@ -11,7 +12,9 @@ test('derived.get()', () => {
     return { count, double }
   })
 
-  expect($._glyxTest().stored.getAll()).toEqual({
+  assertWith<StoreInternals>($)
+
+  expect($._glyx.getStored().getAll()).toEqual({
     count: 1,
     double: 2,
   })
@@ -20,9 +23,9 @@ test('derived.get()', () => {
   expect($.double.get()).toEqual(2)
 
   $.count.set(2)
-  $._glyxTest().stored.flush()
+  $._glyx.getStored().flush()
 
-  expect($._glyxTest().stored.getAll()).toEqual({
+  expect($._glyx.getStored().getAll()).toEqual({
     count: 2,
     double: 4,
   })
@@ -39,19 +42,21 @@ test('derived.use()', () => {
     return { count, double }
   })
 
+  assertWith<StoreInternals>($)
+
   const calls = makeHookCallSpy(() => $.double.use())
 
   expect(calls()).toEqual([[2]])
 
   act(() => {
     $.count.set(2)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls()).toEqual([[2], [4]])
 })
 
-test('derived.use() on two atoms', () => {
+test.only('derived.use() on two atoms', () => {
   const $ = store(() => {
     const a = atom(1)
     const b = atom(2)
@@ -60,20 +65,22 @@ test('derived.use() on two atoms', () => {
     return { a, b, sum }
   })
 
+  assertWith<StoreInternals>($)
+
   const calls = makeHookCallSpy(() => $.sum.use())
 
   expect(calls()).toEqual([[3]])
 
   act(() => {
     $.a.set(10)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls()).toEqual([[3], [12]])
 
   act(() => {
     $.b.set(20)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls()).toEqual([[3], [12], [30]])
@@ -88,13 +95,15 @@ test('derived.use() on a derived', () => {
     return { a, double, quadruple }
   })
 
+  assertWith<StoreInternals>($)
+
   const calls = makeHookCallSpy(() => $.quadruple.use())
 
   expect(calls()).toEqual([[4]])
 
   act(() => {
     $.a.set(10)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls()).toEqual([[4], [40]])
@@ -109,13 +118,15 @@ test('derived.use() on a select', () => {
     return { a, double, quadruple }
   })
 
+  assertWith<StoreInternals>($)
+
   const calls = makeHookCallSpy(() => $.quadruple.use())
 
   expect(calls()).toEqual([[4]])
 
   act(() => {
     $.a.set(10)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   expect(calls()).toEqual([[4], [40]])
@@ -135,7 +146,7 @@ test('dependency list does not include the atoms that derived atoms are derived 
   // todo
 })
 
-test.only('derived function is called once even when two deps change', async () => {
+test('derived function is called once even when two deps change', async () => {
   const spy = vi.fn()
 
   const $ = store(() => {
@@ -150,12 +161,14 @@ test.only('derived function is called once even when two deps change', async () 
     return { a, b, sum }
   })
 
+  assertWith<StoreInternals>($)
+
   expect(spy.mock.calls).toEqual([[3]])
 
   act(() => {
     $.a.set(10)
     $.b.set(20)
-    $._glyxTest().stored.flush()
+    $._glyx.getStored().flush()
   })
 
   // await new Promise((resolve) => setTimeout(resolve, 0))
