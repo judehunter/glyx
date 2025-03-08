@@ -21,7 +21,7 @@ test('watch callback fires once for multiple deps', () => {
 
   $.a.set(3)
   $.a.set(4)
-  $._glyx.getStored().flush()
+  $.getInternals().getStored().flush()
 
   expect(spy).toHaveBeenCalledTimes(1)
 })

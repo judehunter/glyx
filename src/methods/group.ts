@@ -1,5 +1,8 @@
-import { atom, Atom, AtomType } from './atom'
-import { CalledSelect, select, Select } from './select'
+import { assertWith } from '../../test/utils'
+import { MakeInternals, makeInternals } from '../misc/makeInternals'
+import { makeKey } from '../misc/utils'
+import { atom, Atom, AtomInternals, AtomType } from './atom'
+import { CalledSelect, select, Select, SelectInternals } from './select'
 
 export type Group<TReturn> = TReturn & {
   pick: <const TKeys extends keyof TReturn>(
@@ -14,9 +17,11 @@ export type Group<TReturn> = TReturn & {
   with: <TOut>(apply: (group: Group<TReturn>) => TOut) => TOut
 }
 
-export type GroupInternals = {
-  _glyx: { type: 'group' }
-}
+export type GroupInternals = MakeInternals<{
+  type: 'group'
+  name: string | null
+  setup: (name: string | null) => void
+}>
 
 /**
  * Allows you to define a group of atoms and selects, similar to defining
@@ -47,9 +52,8 @@ export const group = <TReturn extends Record<string, any>>(
 ) => {
   const def = defFn()
 
-  const selectable = Object.entries(def).filter(
-    ([key, value]) =>
-      '_glyx' in value && ['atom', 'select'].includes(value._glyx.type),
+  const selectable = Object.entries(def).filter(([key, value]) =>
+    ['atom', 'select', 'group'].includes(value.getInternals?.().type),
   )
 
   const pickFn = <const TKeys>(keys: TKeys[] & (keyof TReturn)[]) => {
@@ -66,12 +70,24 @@ export const group = <TReturn extends Record<string, any>>(
     return apply(target as any)
   }
 
-  const internals = {
-    _glyx: { type: 'group' },
-  } as any as {}
+  const all = select(pickFn)
+
+  const internals = makeInternals({
+    type: 'group',
+    setup: (name: string | null) => {
+      internals.setPartialInternals({ name } as any)
+
+      for (const key of Object.keys(def)) {
+        const value = def[key]
+        if (value.getInternals?.().setup) {
+          value.getInternals().setup(name ? makeKey(name, key) : key)
+        }
+      }
+    },
+  })
 
   const target = {
-    ...internals,
+    ...(internals as {}),
     /**
      * Applies a HOF as middleware on the group. The return type
      * of the HOF will be the return value of the function, letting

@@ -14,7 +14,7 @@ test('derived.get()', () => {
 
   assertWith<StoreInternals>($)
 
-  expect($._glyx.getStored().getAll()).toEqual({
+  expect($.getInternals().getStored().getAll()).toEqual({
     count: 1,
     double: 2,
   })
@@ -23,9 +23,9 @@ test('derived.get()', () => {
   expect($.double.get()).toEqual(2)
 
   $.count.set(2)
-  $._glyx.getStored().flush()
+  $.getInternals().getStored().flush()
 
-  expect($._glyx.getStored().getAll()).toEqual({
+  expect($.getInternals().getStored().getAll()).toEqual({
     count: 2,
     double: 4,
   })
@@ -50,7 +50,7 @@ test('derived.use()', () => {
 
   act(() => {
     $.count.set(2)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[2], [4]])
@@ -73,14 +73,14 @@ test('derived.use() on two atoms', () => {
 
   act(() => {
     $.a.set(10)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[3], [12]])
 
   act(() => {
     $.b.set(20)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[3], [12], [30]])
@@ -103,7 +103,7 @@ test('derived.use() on a derived', () => {
 
   act(() => {
     $.a.set(10)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[4], [40]])
@@ -126,7 +126,7 @@ test('derived.use() on a select', () => {
 
   act(() => {
     $.a.set(10)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[4], [40]])
@@ -168,7 +168,7 @@ test('derived function is called once even when two deps change', async () => {
   act(() => {
     $.a.set(10)
     $.b.set(20)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   // await new Promise((resolve) => setTimeout(resolve, 0))

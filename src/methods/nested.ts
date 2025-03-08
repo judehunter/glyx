@@ -1,4 +1,11 @@
 import { Brand } from '../misc/brand'
+import {
+  getCurrentStore,
+  isCurrentStoreSet,
+  setCurrentStore,
+  unsetCurrentStore,
+} from '../misc/currentStore'
+import { makeInternals } from '../misc/makeInternals'
 import { setupGroup } from '../misc/setup'
 import { attachObjToFn, makeKey } from '../misc/utils'
 import { atom, Atom } from './atom'
@@ -11,31 +18,40 @@ const nestedOnSelect = (
   select: Select<any, any> & SelectInternals,
   nestedDef: (calledSelect: CalledSelect) => Record<string, any>,
 ) => {
-  const newSelect = ((...args) => {
-    // we need to attach the glyx object here since otherwise the setup
-    // in store() will only put it on the wrapper
-    select._glyx = newSelect._glyx
-    const calledSelect = select(...args)
-    const nested = nestedDef(calledSelect)
+  const store = getCurrentStore()
 
-    setupGroup(
-      {
-        get: undefined as any, // TODO
-        getAll: () => newSelect._glyx.getAll(),
-        sub: newSelect._glyx.subWithDeps,
-        set: undefined as any, // TODO
-      },
-      nested,
-      newSelect._glyx.name,
-    )
+  const internals = makeInternals({
+    type: 'select',
+    nested: true, // for users?
+    setup: (name: string) => {
+      internals.setPartialInternals({ name } as any)
+    },
+  })
+
+  const newSelect = ((...args) => {
+    if (isCurrentStoreSet()) {
+      throw new Error('Unexpected current store')
+    }
+    setCurrentStore(store)
+    const calledSelect = select(...args)
+
+    // todo: if select has no name, call setup
+
+    const nested = nestedDef(calledSelect)
+    unsetCurrentStore()
+
+    const name = (internals.getInternals() as any).name
+
+    for (const key of Object.keys(nested)) {
+      const value = nested[key]
+      value.getInternals?.().setup(name ? makeKey(name, key) : key)
+    }
 
     return { ...calledSelect, ...nested }
   }) as Select<any, any> & SelectInternals
 
   return attachObjToFn(newSelect, {
-    _glyx: {
-      type: 'select',
-    },
+    ...(internals as {}),
   }) as any
 }
 
@@ -43,7 +59,7 @@ const nestedOnAtom = (
   atom: Atom,
   nestedDef: (atomObj: Atom) => Record<string, any>,
 ) => {
-  return Object.assign(atom, nestedDef(atom))
+  return { ...atom, ...nestedDef(atom) }
 }
 
 function nested<TParams extends any[], TReturn, TNested>(
@@ -94,7 +110,7 @@ function nested<TValue, TNested>(
  * Note that supporting `pick` in `nested` is not yet implemented.
  */
 function nested(selectOrAtom: Select<any, any> | Atom, nestedDef: unknown) {
-  if ((selectOrAtom as any)._glyx.type === 'select') {
+  if ((selectOrAtom as any).getInternals().type === 'select') {
     return nestedOnSelect(selectOrAtom as any, nestedDef as any)
   }
 

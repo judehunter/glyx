@@ -4,6 +4,9 @@ import { runCustomSelector } from '../misc/runCustomSelector'
 import { useSyncExternalStoreWithSelector } from '../misc/useSyncExternalStoreWithSelector'
 import { attachObjToFn, identity, uniqueDeps } from '../misc/utils'
 import { Brand } from '../misc/brand'
+import { CurrentStore, getCurrentStore } from '../misc/currentStore'
+import { assertWith } from '../../test/utils'
+import { MakeInternals, makeInternals } from '../misc/makeInternals'
 
 export type CalledSelect<TSelected = unknown, TNested = {}> = {
   get<TCustomSelected = TSelected>(
@@ -19,19 +22,19 @@ export type Select<TParams extends any[], TReturn> = (
   ...args: TParams
 ) => CalledSelect<TReturn>
 
-export type SelectInternals = {
-  _glyx: {
-    type: 'select'
-    depsList: undefined | string[]
-    // supplied by store:
-    name: string // note: name is not actually used for anything yet
-    getAll(): Record<string, unknown>
-    subWithDeps: (
-      deps: string[],
-      listener: (value: unknown) => void,
-    ) => () => void
-  }
-}
+export type SelectInternals = MakeInternals<{
+  type: 'select'
+  name: string
+  depsList: undefined | string[]
+  setup: (name: string) => void
+  // // supplied by store:
+  //  // note: name is not actually used for anything yet
+  // getAll(): Record<string, unknown>
+  // subWithDeps: (
+  //   deps: string[],
+  //   listener: (value: unknown) => void,
+  // ) => () => void
+}>
 
 // export type SelectBrand = (...args: any[]) => Brand<'select'>
 
@@ -40,13 +43,16 @@ const makeGet =
     target: Select<any, any> & SelectInternals,
     args: any[],
     selector: (...args: any[]) => any,
+    store: CurrentStore,
   ) =>
   (customSelector?: (...args: any[]) => any) => {
     const { value: selectedValue, depsList } = callAndTrackDeps(
-      { trackDeps: !target._glyx.depsList },
+      { trackDeps: !target.getInternals().depsList },
       () => selector(...args),
     )
-    target._glyx.depsList ??= depsList
+    if (target.getInternals().depsList === undefined) {
+      target.setPartialInternals({ depsList })
+    }
 
     // todo: add error handling and cleanup of deps on error
     const value = (customSelector ?? identity)(selectedValue)
@@ -55,7 +61,11 @@ const makeGet =
   }
 
 const makeUse =
-  (target: Select<any, any> & SelectInternals, args: any[]) =>
+  (
+    target: Select<any, any> & SelectInternals,
+    args: any[],
+    store: CurrentStore,
+  ) =>
   (
     customSelector?: (...args: any[]) => any,
     eqFn?: (a: any, b: any) => boolean,
@@ -67,12 +77,13 @@ const makeUse =
         if (!customSelectorDepsRef.current) {
           throw new Error('customSelectorDepsRef.current is undefined')
         }
-        if (!target._glyx.depsList) {
+        const depsList = target.getInternals().depsList
+        if (!depsList) {
           throw new Error('depsList is undefined')
         }
 
-        return target._glyx.subWithDeps(
-          uniqueDeps(target._glyx.depsList, customSelectorDepsRef.current),
+        return store.handles.subKeys(
+          uniqueDeps(depsList, customSelectorDepsRef.current),
           listener,
         )
       },
@@ -86,8 +97,8 @@ const makeUse =
       // so between store updates (and re-renders for other reasons),
       // if React calls getSnapshot, the selector won't be re-run,
       // and the previously selected value will be reused.
-      target._glyx.getAll,
-      target._glyx.getAll,
+      store.handles.getAll,
+      store.handles.getAll,
       () => {
         const value = target(...args).get()
 
@@ -103,7 +114,13 @@ const makeUse =
 
 // TODO: custom select fn
 const makeSub =
-  (target: any, args: any[], selector: (...args: any[]) => any) => () => {
+  (
+    target: any,
+    args: any[],
+    selector: (...args: any[]) => any,
+    store: CurrentStore,
+  ) =>
+  () => {
     throw new Error('sub is not implemented for select')
   }
 
@@ -139,23 +156,31 @@ const makeSub =
 export const select = <TParams extends any[], TReturn>(
   selector: (...args: TParams) => TReturn,
 ) => {
+  const store = getCurrentStore()
+
+  const internals = makeInternals({
+    type: 'select',
+    depsList: undefined,
+    setup: (name: string) => {
+      internals.setPartialInternals({ name } as any)
+    },
+  })
+
   const target = attachObjToFn(
     (...args: any[]) => {
       return {
         get: (...pass: Parameters<ReturnType<typeof makeGet>>) =>
-          makeGet(target as any, args, selector)(...pass),
+          makeGet(target as any, args, selector, store)(...pass),
 
         use: (...pass: Parameters<ReturnType<typeof makeUse>>) =>
-          makeUse(target as any, args)(...pass),
+          makeUse(target as any, args, store)(...pass),
 
         sub: (...pass: Parameters<ReturnType<typeof makeSub>>) =>
-          makeSub(target, args, selector)(...pass),
+          makeSub(target, args, selector, store)(...pass),
       }
     },
     {
-      _glyx: {
-        type: 'select',
-      } as SelectInternals['_glyx'],
+      ...(internals as {}),
     },
   )
 

@@ -31,7 +31,7 @@ export type Derived<TValue> = Omit<Atom<TValue>, 'set'>
 export const derived = <TValue>(fn: (...args: any[]) => TValue) => {
   const target = atom<TValue>(undefined!)
 
-  onInit(({ sub }) => {
+  onInit(({ subKeys }) => {
     const { value, depsList } = callAndTrackDeps(
       { trackDeps: true, errorOnAlreadyTrackingDeps: true },
       fn,
@@ -43,7 +43,7 @@ export const derived = <TValue>(fn: (...args: any[]) => TValue) => {
       return
     }
 
-    return sub(depsList, () => {
+    return subKeys(depsList, () => {
       target.set(fn())
     })
   })

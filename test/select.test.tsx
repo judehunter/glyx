@@ -19,17 +19,17 @@ test('select.get() with atom as dependency', () => {
   assertWith<StoreInternals>($)
   assertWith<SelectInternals>($.double)
 
-  expect($._glyx.getStored().getAll()).toEqual({
+  expect($.getInternals().getStored().getAll()).toEqual({
     counter: 10,
   })
 
-  expect($.double._glyx.depsList).toBeUndefined()
+  expect($.double.getInternals().depsList).toBeUndefined()
 
   expect($.double().get()).toBe(20)
-  expect($.double._glyx.depsList).toEqual(['counter'])
+  expect($.double.getInternals().depsList).toEqual(['counter'])
 
   $.counter.set(20)
-  $._glyx.getStored().flush()
+  $.getInternals().getStored().flush()
 
   expect($.double().get()).toBe(40)
 })
@@ -48,25 +48,25 @@ test('select.get() with transitive dependency of another select', () => {
   assertWith<StoreInternals>($)
   assertWith<SelectInternals>($.double)
   assertWith<SelectInternals>($.quadruple)
-  expect($._glyx.getStored().getAll()).toEqual({
+  expect($.getInternals().getStored().getAll()).toEqual({
     counter: 10,
   })
 
-  expect($.double._glyx.depsList).toBeUndefined()
-  expect($.quadruple._glyx.depsList).toBeUndefined()
+  expect($.double.getInternals().depsList).toBeUndefined()
+  expect($.quadruple.getInternals().depsList).toBeUndefined()
 
   expect($.double().get()).toBe(20)
 
-  expect($.double._glyx.depsList).toEqual(['counter'])
-  expect($.quadruple._glyx.depsList).toBeUndefined()
+  expect($.double.getInternals().depsList).toEqual(['counter'])
+  expect($.quadruple.getInternals().depsList).toBeUndefined()
 
   expect($.quadruple().get()).toBe(40)
 
-  expect($.quadruple._glyx.depsList).toEqual(['counter'])
-  expect($.quadruple._glyx.depsList).toEqual(['counter'])
+  expect($.double.getInternals().depsList).toEqual(['counter'])
+  expect($.quadruple.getInternals().depsList).toEqual(['counter'])
 
   $.counter.set(20)
-  $._glyx.getStored().flush()
+  $.getInternals().getStored().flush()
 
   expect($.double().get()).toBe(40)
   expect($.quadruple().get()).toBe(80)
@@ -89,7 +89,7 @@ test('select.use() with atom as dependency', () => {
 
   act(() => {
     $.counter.set(20)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[20], [40]])
@@ -116,7 +116,7 @@ test('select.use() with transitive dependency of another select', () => {
 
   act(() => {
     $.counter.set(20)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls1()).toEqual([[20], [40]])
@@ -138,7 +138,7 @@ test('select.get() with selector args', () => {
   expect($.multi(3).get()).toBe(30)
 
   $.counter.set(20)
-  $._glyx.getStored().flush()
+  $.getInternals().getStored().flush()
 
   expect($.multi(2).get()).toBe(40)
   expect($.multi(3).get()).toBe(60)
@@ -159,7 +159,7 @@ test('select.use() with selector args', () => {
 
   act(() => {
     $.counter.set(20)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[20], [40]])
@@ -180,12 +180,12 @@ test('select.get() with two atoms as dependencies', () => {
   expect($.c().get()).toBe(11)
 
   $.a.set(2)
-  $._glyx.getStored().flush()
+  $.getInternals().getStored().flush()
 
   expect($.c().get()).toBe(12)
 
   $.b.set(20)
-  $._glyx.getStored().flush()
+  $.getInternals().getStored().flush()
 
   expect($.c().get()).toBe(22)
 })
@@ -208,14 +208,14 @@ test('select.use() with two atoms as dependencies', () => {
 
   act(() => {
     $.a.set(2)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[11], [12]])
 
   act(() => {
     $.b.set(20)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[11], [12], [22]])
@@ -250,7 +250,7 @@ test('select.get() with custom selector that accesses another atom', () => {
   expect($.mult(2).get((x) => x + 5 + $.b.get())).toBe(125)
 
   $.a.set(11)
-  $._glyx.getStored().flush()
+  $.getInternals().getStored().flush()
 
   expect($.mult(2).get((x) => x + 5 + $.b.get())).toBe(127)
 })
@@ -271,7 +271,7 @@ test('select.use() with custom selector', () => {
 
   act(() => {
     $.a.set(11)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[25], [27]])
@@ -295,14 +295,14 @@ test('select.use() with custom selector that accesses another atom', () => {
 
   act(() => {
     $.a.set(11)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[120], [122]])
 
   act(() => {
     $.b.set(200)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[120], [122], [222]])
@@ -330,7 +330,7 @@ test('select.use() tracks deps of selector and custom selector independently', (
 
   act(() => {
     $.a.set(2)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls1()).toEqual([[2], [4]])
@@ -338,7 +338,7 @@ test('select.use() tracks deps of selector and custom selector independently', (
 
   act(() => {
     $.b.set(20)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls1()).toEqual([[2], [4]])

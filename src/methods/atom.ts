@@ -4,6 +4,14 @@ import { runCustomSelector } from '../misc/runCustomSelector'
 import { useSyncExternalStoreWithSelector } from '../misc/useSyncExternalStoreWithSelector'
 import { identity, uniqueDeps } from '../misc/utils'
 import { Brand } from '../misc/brand'
+import {
+  CurrentStore,
+  getCurrentStore,
+  getCurrentStoreRef,
+} from '../misc/currentStore'
+import { onInit } from './onInit'
+import { assertWith } from '../../test/utils'
+import { MakeInternals, makeInternals } from '../misc/makeInternals'
 
 export type Atom<TValue = unknown> = {
   get<TCustomSelected = TValue>(
@@ -18,24 +26,11 @@ export type Atom<TValue = unknown> = {
   with<TOut>(applyFn: (atom: Atom<TValue>) => TOut): TOut
 }
 
-export type AtomInternals = {
-  _glyx: {
-    type: 'atom'
-    initialValue: unknown
-    onInit?: () => void
-
-    // supplied by store:
-    name: string
-    get(): unknown
-    getAll(): Record<string, unknown>
-    sub(listener: (value: unknown) => void): () => void
-    subWithDeps: (
-      deps: string[],
-      listener: (value: unknown) => void,
-    ) => () => void
-    set(value: unknown): void
-  }
-}
+export type AtomInternals = MakeInternals<{
+  type: 'atom'
+  name: string
+  setup: (name: string) => void
+}>
 
 // export type AtomBrand = Brand<'atom'>
 
@@ -44,15 +39,20 @@ export type AtomType<TAtom extends Atom> = TAtom extends Atom<infer TValue>
   : never
 
 const makeGet =
-  (target: Atom & AtomInternals) => (customSelector?: (value: any) => any) => {
-    pushToDepsListIfTracking(target._glyx.name)
+  (target: Atom & AtomInternals, store: CurrentStore) =>
+  (customSelector?: (value: any) => any) => {
+    // todo: throw if before init
 
-    const value = (customSelector ?? identity)(target._glyx.get())
+    pushToDepsListIfTracking(target.getInternals().name)
+
+    const value = (customSelector ?? identity)(
+      store.handles.getKey(target.getInternals().name),
+    )
     return value
   }
 
 const makeUse =
-  (target: Atom & AtomInternals) =>
+  (target: Atom & AtomInternals, store: CurrentStore) =>
   (
     customSelector?: (value: any) => any,
     eqFn?: (a: any, b: any) => boolean,
@@ -65,8 +65,11 @@ const makeUse =
           throw new Error('customSelectorDepsRef.current is undefined')
         }
 
-        return target._glyx.subWithDeps(
-          uniqueDeps([target._glyx.name], customSelectorDepsRef.current),
+        return store.handles.subKeys(
+          uniqueDeps(
+            [target.getInternals().name],
+            customSelectorDepsRef.current,
+          ),
           listener,
         )
       },
@@ -76,8 +79,8 @@ const makeUse =
     return useSyncExternalStoreWithSelector(
       subscribe,
       // see note in select.use
-      target._glyx.getAll,
-      target._glyx.getAll,
+      store.handles.getAll,
+      store.handles.getAll,
       () => {
         const value = target.get()
 
@@ -92,13 +95,15 @@ const makeUse =
   }
 
 const makeSub =
-  (target: Atom & AtomInternals) => (listener: (value: any) => void) => {
-    return target._glyx.sub(listener)
+  (target: Atom & AtomInternals, store: CurrentStore) =>
+  (listener: (value: any) => void) => {
+    return store.handles.subKeys([target.getInternals().name], listener)
   }
 
-const makeSet = (target: Atom & AtomInternals) => (value: any) => {
-  target._glyx.set(value)
-}
+const makeSet =
+  (target: Atom & AtomInternals, store: CurrentStore) => (value: any) => {
+    store.handles.setKey(target.getInternals().name, value)
+  }
 
 const makeWith =
   (target: Atom & AtomInternals) => (apply: (atom: Atom) => any) => {
@@ -132,9 +137,39 @@ const makeWith =
  * @param initialValue - The initial value of the atom.
  */
 export const atom = <TValue>(initialValue: TValue) => {
-  const internals = { _glyx: { type: 'atom', initialValue } } as any as {}
+  const store = getCurrentStore()
+
+  const internals = makeInternals({
+    type: 'atom',
+    setup: (name: string) => {
+      internals.setPartialInternals({ name } as any)
+    },
+  })
+
+  onInit(({ setKeyInitialValue, getAnonName }) => {
+    if (!(internals.getInternals() as any).name) {
+      internals.setPartialInternals({ name: getAnonName() } as any)
+    }
+    setKeyInitialValue((internals.getInternals() as any).name, initialValue)
+  })
+
+  const get = ((...pass: Parameters<ReturnType<typeof makeGet>>) =>
+    makeGet(target as any, store)(...pass)) as Atom<TValue>['get']
+
+  const use = ((...pass: Parameters<ReturnType<typeof makeUse>>) =>
+    makeUse(target as any, store)(...pass)) as Atom<TValue>['use']
+
+  const sub = ((...pass: Parameters<ReturnType<typeof makeSub>>) =>
+    makeSub(target as any, store)(...pass)) as Atom<TValue>['sub']
+
+  const set = ((...pass: Parameters<ReturnType<typeof makeSet>>) =>
+    makeSet(target as any, store)(...pass)) as Atom<TValue>['set']
+
+  const withFn = ((...pass: Parameters<ReturnType<typeof makeWith>>) =>
+    makeWith(target as any)(...pass)) as Atom<TValue>['with']
+
   const target = {
-    ...internals,
+    ...(internals as {}),
 
     /**
      * Gets the value of the atom - can be used anywhere.
@@ -143,8 +178,7 @@ export const atom = <TValue>(initialValue: TValue) => {
      * Calling this function from a `select` or `derived` will capture
      * this atom as a dependency.
      */
-    get: (...pass: Parameters<ReturnType<typeof makeGet>>) =>
-      makeGet(target as any)(...pass),
+    get,
 
     /**
      * Subscribes to the atom in a React component.
@@ -153,14 +187,12 @@ export const atom = <TValue>(initialValue: TValue) => {
      *
      * You should not call this function from a `select` or `derived`. Use `.get()` instead.
      */
-    use: ((...pass: Parameters<ReturnType<typeof makeUse>>) =>
-      makeUse(target as any)(...pass)) as Atom<TValue>['get'],
+    use,
 
     /**
      * Not implemented
      */
-    sub: ((...pass: Parameters<ReturnType<typeof makeSub>>) =>
-      makeSub(target as any)(...pass)) as Atom<TValue>['sub'],
+    sub,
 
     /**
      * Sets the value of the atom and notifies all dependants.
@@ -170,8 +202,7 @@ export const atom = <TValue>(initialValue: TValue) => {
      * call `$._glyx.getStored().flush()`. However, this is normally
      * discouraged.
      */
-    set: ((...pass: Parameters<ReturnType<typeof makeSet>>) =>
-      makeSet(target as any)(...pass)) as Atom<TValue>['set'],
+    set,
 
     /**
      * Applies a HOF as middleware on the atom. The return type
@@ -181,8 +212,7 @@ export const atom = <TValue>(initialValue: TValue) => {
      * Do not use this outside of a store. In a future version,
      * the method will not be visible in intellisense outside of the store.
      */
-    with: ((...pass: Parameters<ReturnType<typeof makeWith>>) =>
-      makeWith(target as any)(...pass)) as Atom<TValue>['with'],
+    with: withFn,
   }
 
   return target

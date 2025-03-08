@@ -28,7 +28,7 @@ test('isolated updates with dependency tracking', () => {
 
   act(() => {
     $.a.set(2)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls1()).toEqual([[1], [2]])
@@ -37,7 +37,7 @@ test('isolated updates with dependency tracking', () => {
 
   act(() => {
     $.b.set(20)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls1()).toEqual([[1], [2]])
@@ -89,7 +89,7 @@ test('no zombie child problem', () => {
 
   act(() => {
     $.elems.set([11])
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(spyChild0.mock.calls).toEqual([[10], [11]])
@@ -115,7 +115,7 @@ test('no infinite loop with custom selector that returns an unstable reference',
 
   act(() => {
     $.a.set(2)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls1()).toEqual([[{ x: 1 }], [{ x: 2 }]])
@@ -139,11 +139,11 @@ test('component unsubscribes', () => {
 
   const { unmount } = render(<Comp />)
 
-  expect($._glyx.getStored().getListeners().a).toHaveLength(2)
+  expect($.getInternals().getStored().getListeners().a).toHaveLength(2)
 
   unmount()
 
-  expect($._glyx.getStored().getListeners().a).toHaveLength(0)
+  expect($.getInternals().getStored().getListeners().a).toHaveLength(0)
 })
 
 // this is handled by React, not Glyx
@@ -164,7 +164,7 @@ test('updates are batched', () => {
   act(() => {
     $.a.set(3)
     $.b.set(4)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[3], [7]])
@@ -185,7 +185,7 @@ test('action inside store', () => {
 
   act(() => {
     $.increment()
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[1], [2]])
@@ -212,7 +212,7 @@ test('selectors are not called when something else updates', () => {
 
   act(() => {
     $.b.set(3)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[1]])
@@ -255,7 +255,7 @@ test('advanced use case', () => {
   act(() => {
     $.$canvas.nodes.set([])
     $.$canvas.edges.set([])
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([

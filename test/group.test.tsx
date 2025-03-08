@@ -20,14 +20,14 @@ test('group with nested atom', () => {
 
   assertWith<StoreInternals>($)
 
-  expect($._glyx.getStored().getAll()).toEqual({
+  expect($.getInternals().getStored().getAll()).toEqual({
     'canvas.nodeCount': 10,
   })
 
   $.canvas.nodeCount.set(20)
-  $._glyx.getStored().flush()
+  $.getInternals().getStored().flush()
 
-  expect($._glyx.getStored().getAll()).toEqual({
+  expect($.getInternals().getStored().getAll()).toEqual({
     'canvas.nodeCount': 20,
   })
 })
@@ -52,7 +52,7 @@ test('nested groups with atoms', () => {
 
   assertWith<StoreInternals>($)
 
-  expect($._glyx.getStored().getAll()).toEqual({
+  expect($.getInternals().getStored().getAll()).toEqual({
     a: 1,
     'b.c': 2,
     'b.d.e': 3,
@@ -61,9 +61,9 @@ test('nested groups with atoms', () => {
   $.a.set(4)
   $.b.c.set(5)
   $.b.d.e.set(6)
-  $._glyx.getStored().flush()
+  $.getInternals().getStored().flush()
 
-  expect($._glyx.getStored().getAll()).toEqual({
+  expect($.getInternals().getStored().getAll()).toEqual({
     a: 4,
     'b.c': 5,
     'b.d.e': 6,
@@ -90,14 +90,14 @@ test('group.pick() is fine-grained', () => {
 
   act(() => {
     $.$group.a.set(3)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[{ a: 1 }], [{ a: 3 }]])
 
   act(() => {
     $.$group.b.set(4)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[{ a: 1 }], [{ a: 3 }]])
@@ -119,14 +119,14 @@ test('store.pick()', () => {
 
   act(() => {
     $.a.set(3)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[{ a: 1 }], [{ a: 3 }]])
 
   act(() => {
     $.b.set(4)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[{ a: 1 }], [{ a: 3 }]])
@@ -136,7 +136,7 @@ test('group.with() middleware on all atoms', () => {
   const plusOneAllAtoms = <T extends Group<Record<string, any>>>(group: T) => {
     for (const key of Object.keys(group)) {
       const value = group[key]
-      if (value._glyx?.type === 'atom') {
+      if (value.getInternals?.().type === 'atom') {
         const set = value.set
         value.set = (value) => {
           set(value + 1)
@@ -162,7 +162,7 @@ test('group.with() middleware on all atoms', () => {
   expect($.$group.b.get()).toBe(1)
 
   $.$group.a.set(2)
-  $._glyx.getStored().flush()
+  $.getInternals().getStored().flush()
 
   expect($.$group.a.get()).toBe(3)
   expect($.$group.b.get()).toBe(1)

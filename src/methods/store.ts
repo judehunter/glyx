@@ -1,17 +1,19 @@
-import { setCurrentStoreRef, unsetCurrentStoreRef } from '../misc/currentStore'
+import { assertWith } from '../../test/utils'
+import { setCurrentStore, unsetCurrentStore } from '../misc/currentStore'
+import { MakeInternals, makeInternals } from '../misc/makeInternals'
 import { pubsub } from '../misc/pubsub'
 import { Handles, setupGroup } from '../misc/setup'
 import { makeKey } from '../misc/utils'
 import { Atom } from './atom'
-import { Group, group } from './group'
+import { Group, group, GroupInternals } from './group'
 
 export type Store<TReturn extends Record<string, any>> = Group<TReturn>
 
-export type StoreInternals = {
-  _glyx: {
+export type StoreInternals = MakeInternals<
+  {
     getStored: () => ReturnType<typeof pubsub>
-  }
-}
+  } & ReturnType<GroupInternals['getInternals']>
+>
 
 /**
  * Creates a store. Make sure that ALL atoms, selects, etc.
@@ -35,22 +37,30 @@ export const store = <T extends Record<string, any>>(defFn: () => T) => {
   const stored = pubsub()
 
   const initSubbed = [] as ((handles: Handles) => void)[]
-  setCurrentStoreRef({
+  setCurrentStore({
     addOnInit: (fn) => {
       initSubbed.push(fn)
     },
+    handles: stored,
   })
 
   const def = defFn()
   const defGroup = group(() => def)
 
-  setupGroup(stored, defGroup, undefined)
+  assertWith<GroupInternals>(defGroup)
+
+  defGroup.getInternals().setup(null)
 
   for (const fn of initSubbed) {
     fn(stored)
   }
 
-  unsetCurrentStoreRef()
+  unsetCurrentStore()
 
-  return { ...defGroup, _glyx: { getStored: () => stored } } as Store<T>
+  const internals = makeInternals({
+    ...defGroup.getInternals(),
+    getStored: () => stored,
+  })
+
+  return { ...defGroup, ...internals } as Store<T>
 }

@@ -26,12 +26,12 @@ test('atom.set()', () => {
 
   assertWith<StoreInternals>($)
 
-  expect($._glyx.getStored().get('counter')).toBe(5)
+  expect($.getInternals().getStored().getKey('counter')).toBe(5)
 
   $.counter.set(10)
-  $._glyx.getStored().flush()
+  $.getInternals().getStored().flush()
 
-  expect($._glyx.getStored().get('counter')).toBe(10)
+  expect($.getInternals().getStored().getKey('counter')).toBe(10)
 })
 
 test.skip('atom.sub()', () => {
@@ -48,13 +48,13 @@ test.skip('atom.sub()', () => {
   $.counter.sub(listener)
 
   $.counter.set(1)
-  $._glyx.getStored().flush()
+  $.getInternals().getStored().flush()
 
   expect(listener).toHaveBeenCalledTimes(1)
   expect(listener).toHaveBeenCalledWith(1)
 
   $.counter.set(5)
-  $._glyx.getStored().flush()
+  $.getInternals().getStored().flush()
 
   expect(listener).toHaveBeenCalledTimes(2)
   expect(listener).toHaveBeenCalledWith(5)
@@ -82,7 +82,7 @@ test('atom.use()', () => {
 
   act(() => {
     $.counter.set(20)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(spy).toHaveBeenCalledTimes(2)
@@ -118,7 +118,7 @@ test('atom.use() with custom selector', () => {
 
   act(() => {
     $.a.set(11)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[15], [16]])
@@ -140,14 +140,14 @@ test('atom.use() with custom selector that access another atom', () => {
 
   act(() => {
     $.a.set(11)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[110], [111]])
 
   act(() => {
     $.b.set(200)
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
   })
 
   expect(calls()).toEqual([[110], [111], [211]])
@@ -179,7 +179,35 @@ test('atom.use() with custom selector closing over component state', () => {
   expect(spy.mock.calls).toEqual([[2], [3]])
 })
 
-describe('.with()', () => {
+test('anonymous atom', () => {
+  const $ = store(() => {
+    const a = atom(1)
+
+    const getA = a.get
+    const setA = a.set
+
+    return { getA, setA }
+  })
+
+  assertWith<StoreInternals>($)
+
+  expect($.getA()).toBe(1)
+  expect($.getInternals().getStored().getAll()).toEqual({
+    'anon-0': 1,
+  })
+
+  $.setA(2)
+  $.getInternals().getStored().flush()
+
+  expect($.getA()).toBe(2)
+  expect($.getInternals().getStored().getAll()).toEqual({
+    'anon-0': 2,
+  })
+})
+
+test.skip('anonymous atom with the name specified in middleware')
+
+describe.skip('.with()', () => {
   test('get middleware', () => {
     const plusOne = <T extends Atom<any>>(a: T) => {
       const get = a.get
@@ -219,7 +247,7 @@ describe('.with()', () => {
     expect($.a.get()).toBe('a')
 
     $.a.set('b')
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
 
     expect($.a.get()).toBe('ab')
   })
@@ -253,7 +281,7 @@ describe('.with()', () => {
     expect($.a.get()).toBe('a')
 
     $.a.set('b')
-    $._glyx.getStored().flush()
+    $.getInternals().getStored().flush()
 
     expect($.a.get()).toBe('abb')
   })

@@ -43,7 +43,7 @@ export const pubsub = () => {
     }
   }
 
-  const set = (key: string, value: any) => {
+  const setKey = (key: string, value: any) => {
     // replace the stored object so that the reference changes.
     // this is primarily used for useSyncExternalStoreWithSelector behavior.
     // todo: consider if this can be optimized more (though it should be fine)
@@ -61,13 +61,17 @@ export const pubsub = () => {
     pendingUpdates[key] = value
   }
 
-  const get = (key: string) => stored[key]
+  const setKeyInitialValue = (key: string, value: any) => {
+    stored[key] = value
+  }
+
+  const getKey = (key: string) => stored[key]
 
   const getAll = () => stored
 
-  const has = (key: string) => key in stored
+  const hasKey = (key: string) => key in stored
 
-  const sub = (keys: string[], listener: (value: any) => void) => {
+  const subKeys = (keys: string[], listener: (value: any) => void) => {
     for (const key of keys) {
       if (listeners[key]) {
         listeners[key].push(listener)
@@ -85,7 +89,21 @@ export const pubsub = () => {
     }
   }
 
+  let anonCounter = 0
+  const getAnonName = () => `anon-${anonCounter++}`
+
   const getListeners = () => listeners
 
-  return { set, get, getAll, has, sub, getListeners, flush }
+  return {
+    setKey,
+    getKey,
+    getAll,
+    hasKey,
+    subKeys,
+    setKeyInitialValue,
+    getListeners,
+    flush,
+    getAnonName,
+  }
 }
+

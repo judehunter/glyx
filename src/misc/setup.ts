@@ -3,13 +3,20 @@ import { pubsub } from './pubsub'
 import { makeKey } from './utils'
 
 export type Handles = {
-  get: ReturnType<typeof pubsub>['get']
+  getKey: ReturnType<typeof pubsub>['getKey']
   getAll: ReturnType<typeof pubsub>['getAll']
-  sub: ReturnType<typeof pubsub>['sub']
-  set: ReturnType<typeof pubsub>['set']
+  subKeys: ReturnType<typeof pubsub>['subKeys']
+  setKey: ReturnType<typeof pubsub>['setKey']
+  setKeyInitialValue: ReturnType<typeof pubsub>['setKeyInitialValue']
+  getAnonName: ReturnType<typeof pubsub>['getAnonName']
 }
 
-const setupAtom = (handles: Handles, target: Atom & AtomInternals, key: string) => {
+const setupAtom = (
+  handles: Handles,
+  target: Atom & AtomInternals,
+  key: string,
+) => {
+  return null
   handles.set(key, target._glyx.initialValue)
 
   setupGroup(handles, target, key)
@@ -28,6 +35,7 @@ const setupAtom = (handles: Handles, target: Atom & AtomInternals, key: string) 
 }
 
 const setupSelect = (handles: Handles, target: any, key: string) => {
+  return null
   target._glyx = {
     ...target._glyx,
     name: key,
@@ -41,6 +49,7 @@ export const setupGroup = (
   targetDef: any,
   groupKey: string | undefined,
 ) => {
+  return null
   for (const key of Object.keys(targetDef).filter((x) => x !== '_glyx')) {
     const value = targetDef[key]
 
