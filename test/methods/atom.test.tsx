@@ -1,14 +1,14 @@
 import { assertType, describe, expect, expectTypeOf, vi } from 'vitest'
 import { test } from 'vitest'
-import { store, atom } from '../src/index'
+import { store, atom } from '../../src/index'
 import { act, render, renderHook } from '@testing-library/react'
-import { assertWith, makeHookCallSpy } from './utils'
+import { assertWith, makeHookCallSpy } from '../utils'
 import React from 'react'
-import { StoreInternals } from '../src/methods/store'
-import { Atom, AtomInternals } from '../src/methods/atom'
-import { pick } from '../src/middleware/pick'
-import { omit } from '../src/middleware/omit'
-import { name } from '../src/middleware/name'
+import { StoreInternals } from '../../src/methods/store'
+import { Atom, AtomInternals } from '../../src/methods/atom'
+import { pick } from '../../src/middleware/pick'
+import { omit } from '../../src/middleware/omit'
+import { name } from '../../src/middleware/name'
 
 test('.get() of initial value', () => {
   const $ = store(() => {

@@ -6,7 +6,6 @@ import {
   unsetCurrentStore,
 } from '../misc/currentStore'
 import { makeInternals } from '../misc/makeInternals'
-import { setupGroup } from '../misc/setup'
 import { attachObjToFn, makeKey } from '../misc/utils'
 import { atom, Atom } from './atom'
 import { CalledSelect, Select, select, SelectInternals } from './select'
@@ -32,6 +31,7 @@ const nestedOnSelect = (
     if (isCurrentStoreSet()) {
       throw new Error('Unexpected current store')
     }
+    // todo: if select/nestedDef errors, cleanup current store?
     setCurrentStore(store)
     const calledSelect = select(...args)
 
@@ -67,10 +67,10 @@ function nested<TParams extends any[], TReturn, TNested>(
   nestedDef: (calledSelect: CalledSelect<TReturn>) => TNested,
 ): (...args: TParams) => CalledSelect<TReturn, TNested>
 
-function nested<TValue, TNested>(
-  atom: Atom<TValue>,
-  nestedDef: (atom: NoInfer<Atom<TValue>>) => TNested,
-): Atom<TValue> & TNested
+function nested<TAtom extends Atom<any>, TNested>(
+  atom: TAtom,
+  nestedDef: (atom: NoInfer<TAtom>) => TNested,
+): TAtom & TNested
 
 /**
  * Attaches a nested group directly to a select or an atom.

@@ -4,6 +4,17 @@ import { makeKey } from '../misc/utils'
 import { atom, Atom, AtomInternals, AtomType } from './atom'
 import { CalledSelect, select, Select, SelectInternals } from './select'
 
+type MapDeep<T extends any> = {
+  [K in keyof T as T[K] extends (...args: any[]) => any
+    ? never
+    : K]: T[K] extends Record<string, any>
+    ? // todo: improve this (there's no better way to check the type of the atom currently)
+      T[K] extends { set: (value: infer R) => any }
+      ? R
+      : MapDeep<T[K]>
+    : T[K]
+}
+
 export type Group<TReturn> = TReturn & {
   pick: <const TKeys extends keyof TReturn>(
     keys: TKeys[],
@@ -14,6 +25,8 @@ export type Group<TReturn> = TReturn & {
       ? AT
       : never
   }>
+  use: () => MapDeep<TReturn>
+  get: () => MapDeep<TReturn>
   with: <TOut>(apply: (group: Group<TReturn>) => TOut) => TOut
 }
 
@@ -53,7 +66,7 @@ export const group = <TReturn extends Record<string, any>>(
   const def = defFn()
 
   const selectable = Object.entries(def).filter(([key, value]) =>
-    ['atom', 'select', 'group'].includes(value.getInternals?.().type),
+    ['atom', 'group'].includes(value.getInternals?.().type),
   )
 
   const pickFn = <const TKeys>(keys: TKeys[] & (keyof TReturn)[]) => {
@@ -64,13 +77,14 @@ export const group = <TReturn extends Record<string, any>>(
     )
   }
 
-  const pick = select(pickFn)
+  const pick = select(pickFn, { dynamicDeps: true })
+
+  const use = () => pick(selectable.map(([key]) => key)).use()
+  const get = () => pick(selectable.map(([key]) => key)).get()
 
   const withFn = (apply: (group: Group<any>) => any) => {
     return apply(target as any)
   }
-
-  const all = select(pickFn)
 
   const internals = makeInternals({
     type: 'group',
@@ -97,6 +111,14 @@ export const group = <TReturn extends Record<string, any>>(
      * the method will not be visible in intellisense outside of the store.
      */
     with: withFn as Group<TReturn>['with'],
+    /**
+     * TODO: jsdoc
+     */
+    use: use as Group<TReturn>['use'],
+    /**
+     * TODO: jsdoc
+     */
+    get: get as Group<TReturn>['get'],
     /**
      * Convenience `select` that returns a specified
      * subset of the group's atoms, selects, and groups - returned

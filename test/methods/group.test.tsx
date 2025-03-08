@@ -1,11 +1,11 @@
 import { expect, vi } from 'vitest'
 import { test } from 'vitest'
-import { store, atom, group, select, nested } from '../src/index'
+import { store, atom, group, select, nested } from '../../src/index'
 import { act, render, renderHook } from '@testing-library/react'
-import { assertWith, makeHookCallSpy } from './utils'
+import { assertWith, makeHookCallSpy } from '../utils'
 import React, { useState } from 'react'
-import { StoreInternals } from '../src/methods/store'
-import { Group } from '../src/methods/group'
+import { StoreInternals } from '../../src/methods/store'
+import { Group } from '../../src/methods/group'
 
 test('group with nested atom', () => {
   const $ = store(() => {
@@ -103,6 +103,43 @@ test('group.pick() is fine-grained', () => {
   expect(calls()).toEqual([[{ a: 1 }], [{ a: 3 }]])
 })
 
+test('separate group.pick() calls on the same group have separate deps', () => {
+  const $ = store(() => {
+    const $group = group(() => {
+      const a = atom(1)
+      const b = atom(2)
+
+      return { a, b }
+    })
+
+    return { $group }
+  })
+
+  assertWith<StoreInternals>($)
+
+  const calls1 = makeHookCallSpy(() => $.$group.pick(['a']).use())
+  const calls2 = makeHookCallSpy(() => $.$group.pick(['b']).use())
+
+  expect(calls1()).toEqual([[{ a: 1 }]])
+  expect(calls2()).toEqual([[{ b: 2 }]])
+
+  act(() => {
+    $.$group.a.set(3)
+    $.getInternals().getStored().flush()
+  })
+
+  expect(calls1()).toEqual([[{ a: 1 }], [{ a: 3 }]])
+  expect(calls2()).toEqual([[{ b: 2 }]])
+
+  act(() => {
+    $.$group.b.set(4)
+    $.getInternals().getStored().flush()
+  })
+
+  expect(calls1()).toEqual([[{ a: 1 }], [{ a: 3 }]])
+  expect(calls2()).toEqual([[{ b: 2 }], [{ b: 4 }]])
+})
+
 test('store.pick()', () => {
   const $ = store(() => {
     const a = atom(1)
@@ -166,4 +203,69 @@ test('group.with() middleware on all atoms', () => {
 
   expect($.$group.a.get()).toBe(3)
   expect($.$group.b.get()).toBe(1)
+})
+
+test('group.get()', () => {
+  const $ = store(() => {
+    const $group = group(() => {
+      const a = atom(1)
+      const b = atom(2)
+      const c = select(() => a.get() + b.get())
+      const $inner = group(() => {
+        const d = atom(4)
+        return { d }
+      })
+      return { a, b, c, $inner }
+    })
+
+    return { $group }
+  })
+
+  assertWith<StoreInternals>($)
+
+  expect($.get()).toEqual({ $group: { a: 1, b: 2, $inner: { d: 4 } } })
+  expect($.$group.get()).toEqual({ a: 1, b: 2, $inner: { d: 4 } })
+  expect($.$group.$inner.get()).toEqual({ d: 4 })
+})
+
+test('group.use()', () => {
+  const $ = store(() => {
+    const $group = group(() => {
+      const a = atom(1)
+      const b = atom(2)
+      const c = select(() => a.get() + b.get())
+      const $inner = group(() => {
+        const d = atom(4)
+        return { d }
+      })
+      return { a, b, c, $inner }
+    })
+
+    return { $group }
+  })
+
+  assertWith<StoreInternals>($)
+
+  const calls1 = makeHookCallSpy(() => $.use())
+  const calls2 = makeHookCallSpy(() => $.$group.use())
+  const calls3 = makeHookCallSpy(() => $.$group.$inner.use())
+
+  expect(calls1()).toEqual([[{ $group: { a: 1, b: 2, $inner: { d: 4 } } }]])
+  expect(calls2()).toEqual([[{ a: 1, b: 2, $inner: { d: 4 } }]])
+  expect(calls3()).toEqual([[{ d: 4 }]])
+
+  act(() => {
+    $.$group.b.set(5)
+    $.getInternals().getStored().flush()
+  })
+
+  expect(calls1()).toEqual([
+    [{ $group: { a: 1, b: 2, $inner: { d: 4 } } }],
+    [{ $group: { a: 1, b: 5, $inner: { d: 4 } } }],
+  ])
+  expect(calls2()).toEqual([
+    [{ a: 1, b: 2, $inner: { d: 4 } }],
+    [{ a: 1, b: 5, $inner: { d: 4 } }],
+  ])
+  expect(calls3()).toEqual([[{ d: 4 }]])
 })

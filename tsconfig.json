@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "target": "es2018",
-    "lib": ["es2019", "es5", "es6", "dom", "dom.iterable"],
+    "target": "es2022",
+    "lib": ["es2022", "es5", "es6", "dom", "dom.iterable"],
     "allowJs": true,
     "esModuleInterop": true,
     "module": "CommonJS",
@@ -12,6 +12,7 @@
     "noImplicitAny": false,
     "allowSyntheticDefaultImports": true,
     "declaration": true,
+    "exactOptionalPropertyTypes": true,
     "jsx": "preserve",
     "outDir": "./dist"
   },

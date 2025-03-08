@@ -1,21 +1,21 @@
 import { RefObject } from 'react'
 import { callAndTrackDeps } from './deps'
 
-export const runCustomSelector = ({
-  customSelector,
-  customSelectorDepsRef,
+export const runInlineSelector = ({
+  inlineSelector,
+  inlineSelectorDepsRef,
   value,
 }: {
-  customSelector: ((...args: any[]) => any) | undefined
-  customSelectorDepsRef: RefObject<string[] | undefined>
+  inlineSelector: ((...args: any[]) => any) | undefined
+  inlineSelectorDepsRef: RefObject<string[] | undefined>
   value: any
 }) => {
-  if (!customSelector) {
-    customSelectorDepsRef.current ??= []
+  if (!inlineSelector) {
+    inlineSelectorDepsRef.current ??= []
     return value
   }
 
-  if (!customSelectorDepsRef.current) {
+  if (!inlineSelectorDepsRef.current) {
     const { value: selectedValue, depsList } = callAndTrackDeps(
       {
         trackDeps: true,
@@ -23,12 +23,12 @@ export const runCustomSelector = ({
         // since the subscriber won't fire
         errorOnAlreadyTrackingDeps: true,
       },
-      () => customSelector(value),
+      () => inlineSelector(value),
     )
-    customSelectorDepsRef.current = depsList
+    inlineSelectorDepsRef.current = depsList
 
     return selectedValue
   } else {
-    return customSelector(value)
+    return inlineSelector(value)
   }
 }

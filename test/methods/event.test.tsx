@@ -1,8 +1,8 @@
 import { expect, test, vi } from 'vitest'
-import { store } from '../src'
-import { event } from '../src/methods/event'
-import { assertWith } from './utils'
-import { StoreInternals } from '../src/methods/store'
+import { store } from '../../src/index'
+import { event } from '../../src/methods/event'
+import { assertWith } from '../utils'
+import { StoreInternals } from '../../src/methods/store'
 
 test('single listener, no props', () => {
   const $ = store(() => {

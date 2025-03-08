@@ -63,6 +63,8 @@ maybe anon atoms should always be explicitly marked as anon to avoid mistakes?
 wait for commit fn that doesn't force commit like flush and returns a promise
 
 flush directly after store is inited?
+
+nested should just be a middleware?
 */
 
 /*

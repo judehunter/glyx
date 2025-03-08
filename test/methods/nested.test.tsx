@@ -1,9 +1,9 @@
 import { describe, expect } from 'vitest'
 import { test } from 'vitest'
-import { store, atom, select, nested } from '../src/index'
-import { assertWith, makeHookCallSpy } from './utils'
+import { store, atom, select, nested } from '../../src/index'
+import { assertWith, makeHookCallSpy } from '../utils'
 import { act } from 'react'
-import { StoreInternals } from '../src/methods/store'
+import { StoreInternals } from '../../src/methods/store'
 
 describe('nested on select', () => {
   test('select.get()', () => {

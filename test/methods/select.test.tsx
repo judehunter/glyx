@@ -1,11 +1,11 @@
 import { expect, vi } from 'vitest'
 import { test } from 'vitest'
-import { store, atom, group, select, nested } from '../src/index'
+import { store, atom, group, select, nested } from '../../src/index'
 import { act, render, renderHook } from '@testing-library/react'
-import { assertWith, makeHookCallSpy } from './utils'
+import { assertWith, makeHookCallSpy } from '../utils'
 import React, { useState } from 'react'
-import { StoreInternals } from '../src/methods/store'
-import { SelectInternals } from '../src/methods/select'
+import { StoreInternals } from '../../src/methods/store'
+import { SelectInternals } from '../../src/methods/select'
 
 test('select.get() with atom as dependency', () => {
   const $ = store(() => {
@@ -402,3 +402,41 @@ test('select.use() with custom selector closing over component state', () => {
 })
 
 test('select with args doesnt rerun deps tracking')
+
+test('select with dynamicDeps', () => {
+  const $ = store(() => {
+    const a = atom(1)
+    const b = atom(2)
+
+    const c = select((x: any) => x.get(), { dynamicDeps: true })
+
+    return { a, b, c }
+  })
+
+  assertWith<StoreInternals>($)
+  assertWith<SelectInternals>($.c)
+
+  const calls1 = makeHookCallSpy(() => $.c($.a).use())
+  const calls2 = makeHookCallSpy(() => $.c($.b).use())
+
+  expect($.c.getInternals().depsList).toBeUndefined()
+
+  expect(calls1()).toEqual([[1]])
+  expect(calls2()).toEqual([[2]])
+
+  act(() => {
+    $.a.set(3)
+    $.getInternals().getStored().flush()
+  })
+
+  expect(calls1()).toEqual([[1], [3]])
+  expect(calls2()).toEqual([[2]])
+
+  act(() => {
+    $.b.set(4)
+    $.getInternals().getStored().flush()
+  })
+
+  expect(calls1()).toEqual([[1], [3]])
+  expect(calls2()).toEqual([[2], [4]])
+})

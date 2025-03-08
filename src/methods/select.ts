@@ -1,6 +1,6 @@
 import { useRef, useMemo } from 'react'
 import { callAndTrackDeps } from '../misc/deps'
-import { runCustomSelector } from '../misc/runCustomSelector'
+import { runInlineSelector } from '../misc/runInlineSelector'
 import { useSyncExternalStoreWithSelector } from '../misc/useSyncExternalStoreWithSelector'
 import { attachObjToFn, identity, uniqueDeps } from '../misc/utils'
 import { Brand } from '../misc/brand'
@@ -26,6 +26,7 @@ export type SelectInternals = MakeInternals<{
   type: 'select'
   name: string
   depsList: undefined | string[]
+  dynamicDeps: boolean
   setup: (name: string) => void
   // // supplied by store:
   //  // note: name is not actually used for anything yet
@@ -46,8 +47,11 @@ const makeGet =
     store: CurrentStore,
   ) =>
   (customSelector?: (...args: any[]) => any) => {
+    const targetInternals = target.getInternals()
     const { value: selectedValue, depsList } = callAndTrackDeps(
-      { trackDeps: !target.getInternals().depsList },
+      {
+        trackDeps: !targetInternals.depsList && !targetInternals.dynamicDeps,
+      },
       () => selector(...args),
     )
     if (target.getInternals().depsList === undefined) {
@@ -67,23 +71,28 @@ const makeUse =
     store: CurrentStore,
   ) =>
   (
-    customSelector?: (...args: any[]) => any,
+    inlineSelector?: (...args: any[]) => any,
     eqFn?: (a: any, b: any) => boolean,
   ) => {
-    const customSelectorDepsRef = useRef<undefined | string[]>(undefined)
+    const inlineSelectorDepsRef = useRef<undefined | string[]>(undefined)
 
     const subscribe = useMemo(
       () => (listener) => {
-        if (!customSelectorDepsRef.current) {
-          throw new Error('customSelectorDepsRef.current is undefined')
+        if (!inlineSelectorDepsRef.current) {
+          throw new Error('inlineSelectorDepsRef.current is undefined')
         }
-        const depsList = target.getInternals().depsList
+        const targetInternals = target.getInternals()
+        let depsList = targetInternals.depsList
         if (!depsList) {
-          throw new Error('depsList is undefined')
+          if (targetInternals.dynamicDeps) {
+            depsList = []
+          } else {
+            throw new Error('depsList is undefined')
+          }
         }
 
         return store.handles.subKeys(
-          uniqueDeps(depsList, customSelectorDepsRef.current),
+          uniqueDeps(depsList, inlineSelectorDepsRef.current),
           listener,
         )
       },
@@ -100,11 +109,20 @@ const makeUse =
       store.handles.getAll,
       store.handles.getAll,
       () => {
+        const targetInternals = target.getInternals()
+        if (targetInternals.dynamicDeps) {
+          return runInlineSelector({
+            inlineSelector: () =>
+              (inlineSelector ?? identity)(target(...args).get()),
+            inlineSelectorDepsRef,
+            value: undefined,
+          })
+        }
         const value = target(...args).get()
 
-        return runCustomSelector({
-          customSelector,
-          customSelectorDepsRef,
+        return runInlineSelector({
+          inlineSelector,
+          inlineSelectorDepsRef,
           value,
         })
       },
@@ -122,6 +140,11 @@ const makeSub =
   ) =>
   () => {
     throw new Error('sub is not implemented for select')
+  }
+
+const makeWith =
+  (target: any) => (apply: (atom: any) => any) => {
+    return apply(target)
   }
 
 /**
@@ -155,12 +178,14 @@ const makeSub =
  */
 export const select = <TParams extends any[], TReturn>(
   selector: (...args: TParams) => TReturn,
+  { dynamicDeps = false }: { dynamicDeps?: boolean } = {},
 ) => {
   const store = getCurrentStore()
 
   const internals = makeInternals({
     type: 'select',
     depsList: undefined,
+    dynamicDeps,
     setup: (name: string) => {
       internals.setPartialInternals({ name } as any)
     },

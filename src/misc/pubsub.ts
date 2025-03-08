@@ -41,6 +41,7 @@ export const pubsub = () => {
 
   const flush = () => {
     // applyUpdates might add more updates
+    // todo: error on infinite loop
     while (pendingUpdates) {
       applyUpdates()
     }

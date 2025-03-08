@@ -1,6 +1,10 @@
 import { useRef, useMemo } from 'react'
-import { callAndTrackDeps, pushToDepsListIfTracking } from '../misc/deps'
-import { runCustomSelector } from '../misc/runCustomSelector'
+import {
+  callAndTrackDeps,
+  getNoTrack,
+  pushToDepsListIfTracking,
+} from '../misc/deps'
+import { runInlineSelector } from '../misc/runInlineSelector'
 import { useSyncExternalStoreWithSelector } from '../misc/useSyncExternalStoreWithSelector'
 import { identity, uniqueDeps } from '../misc/utils'
 import { Brand } from '../misc/brand'
@@ -40,12 +44,14 @@ export type AtomType<TAtom extends Atom> = TAtom extends Atom<infer TValue>
 
 const makeGet =
   (target: Atom & AtomInternals, store: CurrentStore) =>
-  (customSelector?: (value: any) => any) => {
+  (inlineSelector?: (value: any) => any) => {
     // todo: throw if before init
 
-    pushToDepsListIfTracking(target.getInternals().name)
+    if (!getNoTrack()) {
+      pushToDepsListIfTracking(target.getInternals().name)
+    }
 
-    const value = (customSelector ?? identity)(
+    const value = (inlineSelector ?? identity)(
       store.handles.getKey(target.getInternals().name),
     )
     return value
@@ -54,21 +60,21 @@ const makeGet =
 const makeUse =
   (target: Atom & AtomInternals, store: CurrentStore) =>
   (
-    customSelector?: (value: any) => any,
+    inlineSelector?: (value: any) => any,
     eqFn?: (a: any, b: any) => boolean,
   ) => {
-    const customSelectorDepsRef = useRef<undefined | string[]>(undefined)
+    const inlineSelectorDepsRef = useRef<undefined | string[]>(undefined)
 
     const subscribe = useMemo(
       () => (listener) => {
-        if (!customSelectorDepsRef.current) {
-          throw new Error('customSelectorDepsRef.current is undefined')
+        if (!inlineSelectorDepsRef.current) {
+          throw new Error('inlineSelectorDepsRef.current is undefined')
         }
 
         return store.handles.subKeys(
           uniqueDeps(
             [target.getInternals().name],
-            customSelectorDepsRef.current,
+            inlineSelectorDepsRef.current,
           ),
           listener,
         )
@@ -84,9 +90,9 @@ const makeUse =
       () => {
         const value = target.get()
 
-        return runCustomSelector({
-          customSelector,
-          customSelectorDepsRef,
+        return runInlineSelector({
+          inlineSelector,
+          inlineSelectorDepsRef,
           value,
         })
       },

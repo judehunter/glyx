@@ -2,6 +2,8 @@ export let TRACKING_DEPS = false
 
 export let DEPS_LIST: string[] = []
 
+export let NO_TRACK = false
+
 export const callAndTrackDeps = (
   {
     trackDeps,
@@ -25,13 +27,14 @@ export const callAndTrackDeps = (
     }
   }
 
-  let value: any;
+  let value: any
   try {
     value = fn()
   } catch (e) {
     if (isTrackingDepsNow) {
       TRACKING_DEPS = false
       DEPS_LIST = []
+      NO_TRACK = false
     }
     throw e
   }
@@ -51,3 +54,12 @@ export const pushToDepsListIfTracking = (name: string) => {
     DEPS_LIST.push(name)
   }
 }
+
+export const noTrack = <T>(fn: () => T) => {
+  NO_TRACK = true
+  const result = fn()
+  NO_TRACK = false
+  return result
+}
+
+export const getNoTrack = () => NO_TRACK
