@@ -5,10 +5,7 @@ export const attachObjToFn = <
   fn: TFn,
   obj: TObj,
 ) => {
-  for (const key in obj) {
-    ;(fn as any)[key] = obj[key]
-  }
-  return fn as TFn & TObj
+  return Object.assign(fn, obj) as TFn & TObj
 }
 
 export const uniqueDeps = (a: string[], b: string[]) => {
@@ -16,3 +13,7 @@ export const uniqueDeps = (a: string[], b: string[]) => {
 }
 
 export const identity = <T>(x: T) => x
+
+export const makeKey = (groupKey: string | undefined, key: string) => {
+  return groupKey ? `${groupKey}.${key}` : key
+}

@@ -1,3 +1,8 @@
+/**
+ * Extracted from https://github.com/facebook/react
+ * MIT License
+ */
+
 import React, {
   useSyncExternalStore,
   useRef,

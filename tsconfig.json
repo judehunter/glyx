@@ -15,5 +15,5 @@
     "jsx": "preserve",
     "outDir": "./dist"
   },
-  "include": ["src", "vitest.config.js"]
+  "include": ["src", "test", "vitest.config.js"]
 }

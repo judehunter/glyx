@@ -1,6 +1,6 @@
 import { expect, vi } from 'vitest'
 import { test } from 'vitest'
-import { atom, group, nested, select, store } from '..'
+import { store, atom, group, select, nested } from '../src/index'
 import { act, render, renderHook } from '@testing-library/react'
 import { makeHookCallSpy } from './utils'
 import React, { useState } from 'react'
