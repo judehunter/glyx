@@ -6,9 +6,6 @@ import { identity, uniqueDeps } from '../misc/utils'
 import { Brand } from '../misc/brand'
 
 export type Atom<TValue = unknown> = {
-  /**
-   * hello
-   */
   get<TCustomSelected = TValue>(
     customSelector?: (value: TValue) => TCustomSelected,
   ): TCustomSelected
@@ -18,6 +15,7 @@ export type Atom<TValue = unknown> = {
   ): TCustomSelected
   sub(listener: (value: TValue) => void): () => void
   set(value: TValue): void
+  with<TOut>(applyFn: (atom: Atom<TValue>) => TOut): TOut
 }
 
 export type AtomInternals = {
@@ -102,6 +100,11 @@ const makeSet = (target: Atom & AtomInternals) => (value: any) => {
   target._glyx.set(value)
 }
 
+const makeWith =
+  (target: Atom & AtomInternals) => (apply: (atom: Atom) => any) => {
+    return apply(target as any)
+  }
+
 /**
  * Creates an atom with the given initial value. The atom's value
  * is persisted within the store.
@@ -129,21 +132,58 @@ const makeSet = (target: Atom & AtomInternals) => (value: any) => {
  * @param initialValue - The initial value of the atom.
  */
 export const atom = <TValue>(initialValue: TValue) => {
+  const internals = { _glyx: { type: 'atom', initialValue } } as any as {}
   const target = {
-    _glyx: { type: 'atom', initialValue } as AtomInternals['_glyx'],
+    ...internals,
 
+    /**
+     * Gets the value of the atom - can be used anywhere.
+     * Allows an optional inline selector.
+     *
+     * Calling this function from a `select` or `derived` will capture
+     * this atom as a dependency.
+     */
     get: (...pass: Parameters<ReturnType<typeof makeGet>>) =>
       makeGet(target as any)(...pass),
 
-    use: (...pass: Parameters<ReturnType<typeof makeUse>>) =>
-      makeUse(target as any)(...pass),
+    /**
+     * Subscribes to the atom in a React component.
+     * Rules of hooks apply.
+     * Allows an optional inline selector.
+     *
+     * You should not call this function from a `select` or `derived`. Use `.get()` instead.
+     */
+    use: ((...pass: Parameters<ReturnType<typeof makeUse>>) =>
+      makeUse(target as any)(...pass)) as Atom<TValue>['get'],
 
-    sub: (...pass: Parameters<ReturnType<typeof makeSub>>) =>
-      makeSub(target as any)(...pass),
+    /**
+     * Not implemented
+     */
+    sub: ((...pass: Parameters<ReturnType<typeof makeSub>>) =>
+      makeSub(target as any)(...pass)) as Atom<TValue>['sub'],
 
-    set: (...pass: Parameters<ReturnType<typeof makeSet>>) =>
-      makeSet(target as any)(...pass),
+    /**
+     * Sets the value of the atom and notifies all dependants.
+     *
+     * Atom updates are batched, and will be committed once all
+     * synchronous code runs. If you want to force the commit,
+     * call `$._glyx.getStored().flush()`. However, this is normally
+     * discouraged.
+     */
+    set: ((...pass: Parameters<ReturnType<typeof makeSet>>) =>
+      makeSet(target as any)(...pass)) as Atom<TValue>['set'],
+
+    /**
+     * Applies a HOF as middleware on the atom. The return type
+     * of the HOF will be the return value of the function, letting
+     * you affect the type of the atom and chain middleware.
+     *
+     * Do not use this outside of a store. In a future version,
+     * the method will not be visible in intellisense outside of the store.
+     */
+    with: ((...pass: Parameters<ReturnType<typeof makeWith>>) =>
+      makeWith(target as any)(...pass)) as Atom<TValue>['with'],
   }
 
-  return target as any as Atom<TValue>
+  return target
 }

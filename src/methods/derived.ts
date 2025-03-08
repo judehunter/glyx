@@ -44,7 +44,6 @@ export const derived = <TValue>(fn: (...args: any[]) => TValue) => {
     }
 
     return sub(depsList, () => {
-      console.log('1')
       target.set(fn())
     })
   })

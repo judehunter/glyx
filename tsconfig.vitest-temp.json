@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "es2018",
+    "lib": [
+      "es2019",
+      "es5",
+      "es6",
+      "dom",
+      "dom.iterable"
+    ],
+    "allowJs": true,
+    "esModuleInterop": true,
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "downlevelIteration": true,
+    "strict": true,
+    "noImplicitAny": false,
+    "allowSyntheticDefaultImports": true,
+    "declaration": true,
+    "jsx": "preserve",
+    "outDir": "./dist",
+    "emitDeclarationOnly": false,
+    "incremental": true,
+    "tsBuildInfoFile": "D:/dev/oss/glyx/node_modules/.pnpm/vitest@2.1.8_@types+node@15.14.9_jsdom@26.0.0/node_modules/vitest/dist/chunks/tsconfig.tmp.tsbuildinfo"
+  },
+  "include": [
+    "src",
+    "test",
+    "vitest.config.js"
+  ],
+  "exclude": [
+    "./dist"
+  ]
+}

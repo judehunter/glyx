@@ -12,7 +12,7 @@
     "declarative"
   ],
   "scripts": {
-    "test": "vitest watch --dir=test",
+    "test": "vitest watch",
     "build": "tsc --project tsconfig.build.json"
   },
   "sideEffects": false,
@@ -29,7 +29,7 @@
     "jsdom": "^26.0.0",
     "react": "^19.0.0",
     "typescript": "^5.7.3",
-    "vitest": "^2.1.8"
+    "vitest": "^3.0.3"
   },
   "prettier": {
     "arrowParens": "always",

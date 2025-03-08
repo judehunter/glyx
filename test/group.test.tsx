@@ -5,6 +5,7 @@ import { act, render, renderHook } from '@testing-library/react'
 import { assertWith, makeHookCallSpy } from './utils'
 import React, { useState } from 'react'
 import { StoreInternals } from '../src/methods/store'
+import { Group } from '../src/methods/group'
 
 test('group with nested atom', () => {
   const $ = store(() => {
@@ -129,4 +130,40 @@ test('store.pick()', () => {
   })
 
   expect(calls()).toEqual([[{ a: 1 }], [{ a: 3 }]])
+})
+
+test('group.with() middleware on all atoms', () => {
+  const plusOneAllAtoms = <T extends Group<Record<string, any>>>(group: T) => {
+    for (const key of Object.keys(group)) {
+      const value = group[key]
+      if (value._glyx?.type === 'atom') {
+        const set = value.set
+        value.set = (value) => {
+          set(value + 1)
+        }
+      }
+    }
+    return group as T
+  }
+
+  const $ = store(() => {
+    const $group = group(() => {
+      const a = atom(1)
+      const b = atom(1)
+      return { a, b }
+    }).with(plusOneAllAtoms)
+
+    return { $group }
+  })
+
+  assertWith<StoreInternals>($)
+
+  expect($.$group.a.get()).toBe(1)
+  expect($.$group.b.get()).toBe(1)
+
+  $.$group.a.set(2)
+  $._glyx.getStored().flush()
+
+  expect($.$group.a.get()).toBe(3)
+  expect($.$group.b.get()).toBe(1)
 })

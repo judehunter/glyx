@@ -1,4 +1,4 @@
-import { Atom } from '../methods/atom'
+import { Atom, AtomInternals } from '../methods/atom'
 import { pubsub } from './pubsub'
 import { makeKey } from './utils'
 
@@ -9,7 +9,7 @@ export type Handles = {
   set: ReturnType<typeof pubsub>['set']
 }
 
-const setupAtom = (handles: Handles, target: Atom, key: string) => {
+const setupAtom = (handles: Handles, target: Atom & AtomInternals, key: string) => {
   handles.set(key, target._glyx.initialValue)
 
   setupGroup(handles, target, key)

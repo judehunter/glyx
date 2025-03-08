@@ -1,10 +1,11 @@
-import { expect, vi } from 'vitest'
+import { assertType, describe, expect, expectTypeOf, vi } from 'vitest'
 import { test } from 'vitest'
 import { store, atom } from '../src/index'
 import { act, render, renderHook } from '@testing-library/react'
 import { assertWith, makeHookCallSpy } from './utils'
 import React from 'react'
 import { StoreInternals } from '../src/methods/store'
+import { Atom } from '../src/methods/atom'
 
 test('atom.get() of initial value', () => {
   const $ = store(() => {
@@ -176,4 +177,101 @@ test('atom.use() with custom selector closing over component state', () => {
   rerender(<Comp factor={3} />)
 
   expect(spy.mock.calls).toEqual([[2], [3]])
+})
+
+describe('.with()', () => {
+  test('get middleware', () => {
+    const plusOne = <T extends Atom<any>>(a: T) => {
+      const get = a.get
+      return Object.assign(a, {
+        get: () => {
+          return get() + 1
+        },
+      }) as T
+    }
+
+    const $ = store(() => {
+      const a = atom(1).with(plusOne)
+
+      return { a }
+    })
+
+    expect($.a.get()).toBe(2)
+  })
+  test('set middleware', () => {
+    const append = <T extends Atom<string>>(a: T) => {
+      const set = a.set
+      return Object.assign(a, {
+        set: (value: any) => {
+          return set(a.get() + value)
+        },
+      }) as T
+    }
+
+    const $ = store(() => {
+      const a = atom('a').with(append)
+
+      return { a }
+    })
+
+    assertWith<StoreInternals>($)
+
+    expect($.a.get()).toBe('a')
+
+    $.a.set('b')
+    $._glyx.getStored().flush()
+
+    expect($.a.get()).toBe('ab')
+  })
+  test('chaining middleware', () => {
+    const append = <T extends Atom<string>>(a: T) => {
+      const set = a.set
+      return Object.assign(a, {
+        set: (value: any) => {
+          return set(a.get() + value)
+        },
+      }) as T
+    }
+
+    const repeat = <T extends Atom<string>>(a: T) => {
+      const set = a.set
+      return Object.assign(a, {
+        set: (value: any) => {
+          return set(value + value)
+        },
+      }) as T
+    }
+
+    const $ = store(() => {
+      const a = atom('a').with(append).with(repeat)
+
+      return { a }
+    })
+
+    assertWith<StoreInternals>($)
+
+    expect($.a.get()).toBe('a')
+
+    $.a.set('b')
+    $._glyx.getStored().flush()
+
+    expect($.a.get()).toBe('abb')
+  })
+  // TODO: this could be a good way to specify whether
+  // an optic uses get/set
+  test('remove method', () => {
+    const onlyGet = <T extends Atom<any>>(a: T) => {
+      // not actually removing the method, since currently
+      // that breaks some stuff
+      return a as Omit<T, 'set'>
+    }
+
+    const $ = store(() => {
+      const a = atom(1).with(onlyGet)
+
+      return { a }
+    })
+
+    expectTypeOf($.a).not.toHaveProperty('set')
+  })
 })

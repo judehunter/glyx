@@ -11,6 +11,11 @@ export type Group<TReturn> = TReturn & {
       ? AT
       : never
   }>
+  with: <TOut>(apply: (group: Group<TReturn>) => TOut) => TOut
+}
+
+export type GroupInternals = {
+  _glyx: { type: 'group' }
 }
 
 /**
@@ -55,25 +60,30 @@ export const group = <TReturn extends Record<string, any>>(
     )
   }
 
-  // const s = <T
-
   const pick = select(pickFn)
 
-  // const pick = select(makePick<TReturn>(selectable)) as any as SelectFromFn<
-  //   ReturnType<typeof makePick<TReturn>>
-  // >
+  const withFn = (apply: (group: Group<any>) => any) => {
+    return apply(target as any)
+  }
 
   const internals = {
     _glyx: { type: 'group' },
   } as any as {}
 
-  return {
+  const target = {
     ...internals,
-    pick,
-    // s: select,
+    /**
+     * Applies a HOF as middleware on the group. The return type
+     * of the HOF will be the return value of the function, letting
+     * you affect the type of the group and chain middleware.
+     *
+     * Do not use this outside of a store. In a future version,
+     * the method will not be visible in intellisense outside of the store.
+     */
+    with: withFn as Group<TReturn>['with'],
     /**
      * Convenience `select` that returns a specified
-     * subset of the group's atoms and selects, returned
+     * subset of the group's atoms, selects, and groups - returned
      * in one combined object.
      *
      * Usage:
@@ -92,7 +102,9 @@ export const group = <TReturn extends Record<string, any>>(
      * // functions like any other select
      * ```
      */
-    // pick,
+    pick: pick as Group<TReturn>['pick'],
     ...def,
-  } as any as Group<TReturn>
+  }
+
+  return target
 }

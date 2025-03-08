@@ -31,7 +31,8 @@ export const pubsub = () => {
     ]
 
     for (const listener of dedupedListeners) {
-      listener()
+      // TODO
+      ;(listener as any)()
     }
   }
 

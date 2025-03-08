@@ -56,7 +56,7 @@ test('derived.use()', () => {
   expect(calls()).toEqual([[2], [4]])
 })
 
-test.only('derived.use() on two atoms', () => {
+test('derived.use() on two atoms', () => {
   const $ = store(() => {
     const a = atom(1)
     const b = atom(2)

@@ -54,6 +54,8 @@ add onInit to all atoms, selects, etc. that checks if they have been initialized
 remove values from pending updates that are identical? what about eqfn?
 
 function to wrap dependencies that should not be tracked (akin to solid)
+
+group set
 */
 
 /*
