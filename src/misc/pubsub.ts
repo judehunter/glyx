@@ -64,7 +64,12 @@ const makePubsub = () => {
     stored[key] = value
   }
 
-  const getKey = (key: string) => stored[key]
+  const getKey = (key: string) => {
+    if (!(key in stored)) {
+      throw new Error(`Key ${key} not found`)
+    }
+    return stored[key]
+  }
 
   const getAll = () => stored
 
@@ -86,6 +91,12 @@ const makePubsub = () => {
         }
       }
     }
+  }
+
+  const delKey = (key: string) => {
+    delete stored[key]
+    delete listeners[key]
+    delete pendingUpdates?.[key]
   }
 
   const reset = () => {
@@ -118,6 +129,7 @@ const makePubsub = () => {
     getAnonName,
     reset,
     assertNameNotExists,
+    delKey,
   }
 }
 

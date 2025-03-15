@@ -1,7 +1,7 @@
 let CURRENT_STORE_REF: {
   current:
     | {
-        addOnInit: (fn: () => void) => void
+        addOnInit: (fn: () => void | (() => void)) => void
       }
     | undefined
 } = { current: undefined }

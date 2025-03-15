@@ -6,6 +6,7 @@ import { makeHookCallSpy } from '../utils'
 import { SelectInternals } from '../../src/methods/select'
 import { pubsub } from '../../src/misc/pubsub'
 import { assertWith } from '../../src/misc/utils'
+import React from 'react'
 
 test('select.get() with atom as dependency', () => {
   const $ = store(() => {

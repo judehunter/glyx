@@ -1,6 +1,6 @@
 export const omit =
   <T extends Record<string, any>, TOmitted extends keyof T>(keys: TOmitted[]) =>
-  (obj: T) => {
+  <T2 extends T>(obj: T2) => {
     const copy = { ...obj }
 
     for (const key of keys) {
@@ -8,7 +8,7 @@ export const omit =
     }
 
     return { getInternals: obj.getInternals, ...copy } as any as Omit<
-      T,
+      T2,
       TOmitted
     >
   }

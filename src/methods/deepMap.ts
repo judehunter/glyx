@@ -1,4 +1,4 @@
-import { name } from '../middleware/name'
+import { name } from '../hof/name'
 import {
   getCurrentStore,
   setCurrentStore,
@@ -8,7 +8,7 @@ import { noTrack } from '../misc/deps'
 import { assertWith } from '../misc/utils'
 import { Atom, atom, AtomInternals } from './atom'
 import { nested } from './nested'
-import { CalledSelect, select } from './select'
+import { CalledSelect, Select, select } from './select'
 
 // const reducePath = (root: Record<string, any>, path: string[]) => {
 //   return path.reduce((acc, key) => acc[key], root)
@@ -333,4 +333,16 @@ export const deepMap = <const TValue extends Record<string, any>>(
     pick: pick as DeepMap<TValue>['pick'],
     setDeep: setDeep as any as DeepMap<TValue>['setDeep'],
   }))
+}
+
+/*
+
+const query = atom().with(deep())
+const data = select(() => query.get(x => x.data))
+
+
+*/
+
+const deep = <T extends Atom<any> | Select<any, any>>() => (target: T) => {
+  return target
 }

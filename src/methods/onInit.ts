@@ -17,7 +17,7 @@ import { getCurrentStoreRef } from '../misc/currentStore'
  * })
  * ```
  */
-export const onInit = (fn: () => void) => {
+export const onInit = (fn: () => void | (() => void)) => {
   const currentStore = getCurrentStoreRef().current
 
   if (!currentStore) {

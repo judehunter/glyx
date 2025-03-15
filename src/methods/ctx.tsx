@@ -1,4 +1,14 @@
-import { Context, createContext, ReactNode, useContext, useMemo } from 'react'
+import React, {
+  Context,
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
+import { assertWith } from '../misc/utils'
+import { StoreInternals } from './store'
 
 const useContextOrThrow = <T,>(context: Context<T>, name: string) => {
   const value = useContext(context)
@@ -15,7 +25,19 @@ export const ctx = <TProps, TDef>(def: (props: TProps) => TDef) => {
   const reactCtx = createContext<TDef | undefined>(undefined)
 
   const Provider = (props: TProps & { children: ReactNode }) => {
-    const calledDef = useMemo(() => def(props), [])
+    const [calledDef, setCalledDef] = useState(() => def(props))
+
+    useEffect(() => {
+      if (!calledDef) {
+        // for strict mode
+        setCalledDef(def(props))
+      }
+      return () => {
+        assertWith<StoreInternals>(calledDef)
+        calledDef.getInternals().destroy()
+        setCalledDef(undefined!)
+      }
+    }, [])
 
     return (
       <reactCtx.Provider value={calledDef}>{props.children}</reactCtx.Provider>

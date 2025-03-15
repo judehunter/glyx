@@ -5,6 +5,7 @@ import { act, render, renderHook } from '@testing-library/react'
 import { makeHookCallSpy } from '../utils'
 import { Atom } from '../../src/methods/atom'
 import { pubsub } from '../../src/misc/pubsub'
+import React from 'react'
 
 test('.get() of initial value', () => {
   const $ = store(() => {
@@ -199,8 +200,8 @@ test('anonymous atom', () => {
   })
 })
 
-test('.with() get middleware', () => {
-  const plusOne = <T extends Atom<any>>(a: T) => {
+test('HOF get', () => {
+  const withPlusOne = <T extends Atom<any>>(a: T) => {
     const get = a.get
     return Object.assign(a, {
       get: () => {
@@ -210,15 +211,15 @@ test('.with() get middleware', () => {
   }
 
   const $ = store(() => {
-    const a = atom(1).with(plusOne)
+    const a = withPlusOne(atom(1))
 
     return { a }
   })
 
   expect($.a.get()).toBe(2)
 })
-test('.with() set middleware', () => {
-  const append = <T extends Atom<string>>(a: T) => {
+test('HOF set', () => {
+  const withAppend = <T extends Atom<string>>(a: T) => {
     const set = a.set
     return Object.assign(a, {
       set: (value: any) => {
@@ -228,7 +229,7 @@ test('.with() set middleware', () => {
   }
 
   const $ = store(() => {
-    const a = atom('a').with(append)
+    const a = withAppend(atom('a'))
 
     return { a }
   })
@@ -240,8 +241,8 @@ test('.with() set middleware', () => {
 
   expect($.a.get()).toBe('ab')
 })
-test('.with() chaining middleware', () => {
-  const append = <T extends Atom<string>>(a: T) => {
+test('HOF chaining', () => {
+  const withAppend = <T extends Atom<string>>(a: T) => {
     const set = a.set
     return Object.assign(a, {
       set: (value: any) => {
@@ -250,7 +251,7 @@ test('.with() chaining middleware', () => {
     }) as T
   }
 
-  const repeat = <T extends Atom<string>>(a: T) => {
+  const withRepeat = <T extends Atom<string>>(a: T) => {
     const set = a.set
     return Object.assign(a, {
       set: (value: any) => {
@@ -260,7 +261,7 @@ test('.with() chaining middleware', () => {
   }
 
   const $ = store(() => {
-    const a = atom('a').with(append).with(repeat)
+    const a = withRepeat(withAppend(atom('a')))
 
     return { a }
   })

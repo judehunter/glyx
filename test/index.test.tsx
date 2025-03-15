@@ -2,13 +2,14 @@ import { expect, vi } from 'vitest'
 import { test } from 'vitest'
 import { store, atom, group, select, nested } from '../src/index'
 import { act, render, renderHook } from '@testing-library/react'
-import { assertWith, makeHookCallSpy } from './utils'
+import { makeHookCallSpy } from './utils'
 import React, { useState } from 'react'
 import { StoreInternals } from '../src/methods/store'
 import { DEPS_LIST, TRACKING_DEPS } from '../src/misc/deps'
 import { AtomInternals } from '../src/methods/atom'
 import { SelectInternals } from '../src/methods/select'
 import { pubsub } from '../src/misc/pubsub'
+import { assertWith } from '../src/misc/utils'
 
 test('isolated updates with dependency tracking', () => {
   const $ = store(() => {

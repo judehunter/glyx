@@ -6,7 +6,9 @@ import { Group, group, GroupInternals } from './group'
 export type Store<TReturn extends Record<string, any>> = Group<TReturn>
 
 export type StoreInternals = MakeInternals<
-  {} & ReturnType<GroupInternals['getInternals']>
+  {
+    destroy: () => void
+  } & ReturnType<GroupInternals['getInternals']>
 >
 
 /**
@@ -48,10 +50,10 @@ export const store = <T extends Record<string, any>>(
   defFn: () => T,
   name: string = '$',
 ) => {
-  const initSubbed = [] as (() => void)[]
+  const inits = [] as (() => void | (() => void))[]
   setCurrentStore({
     addOnInit: (fn) => {
-      initSubbed.push(fn)
+      inits.push(fn)
     },
   })
 
@@ -63,14 +65,23 @@ export const store = <T extends Record<string, any>>(
   // todo: name
   defGroup.getInternals().setup(name)
 
-  for (const fn of initSubbed) {
-    fn()
+  const destroys = [] as (() => void)[]
+  for (const fn of inits) {
+    const destroy = fn()
+    if (destroy) {
+      destroys.push(destroy)
+    }
   }
 
   unsetCurrentStore()
 
   const internals = makeInternals({
     ...defGroup.getInternals(),
+    destroy: () => {
+      for (const destroy of destroys) {
+        destroy()
+      }
+    },
   })
 
   return { ...defGroup, ...internals } as Store<T>

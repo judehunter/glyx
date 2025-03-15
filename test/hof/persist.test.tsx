@@ -1,9 +1,6 @@
 import { expect, test, vi } from 'vitest'
-import { atom, store } from '../../src'
-import { getAtomName, persist } from '../../src/middleware/persist'
-import { StoreInternals } from '../../src/methods/store'
-import { assertWith } from '../utils'
-import { pubsub } from '../../src/misc/pubsub'
+import { atom, persist, pubsub, store } from '../../src'
+import { getAtomName } from '../../src/hof/persist'
 
 const makeMockStorage = (init = {}) => {
   const storage = { ...init }
@@ -18,7 +15,7 @@ test('persist on atom, loaded instantly, empty storage', () => {
   const storage = makeMockStorage()
 
   const $ = store(() => {
-    const a = atom(1).with(persist({ key: 'test', storage, loadOnInit: true }))
+    const a = persist({ key: 'test', storage, loadOnInit: true })(atom(1))
     return { a }
   })
 
@@ -36,7 +33,7 @@ test('persist on atom, loaded instantly, from storage', () => {
   const storage = makeMockStorage({ test: '{"value":2,"version":0}' })
 
   const $ = store(() => {
-    const a = atom(1).with(persist({ key: 'test', storage, loadOnInit: true }))
+    const a = persist({ key: 'test', storage, loadOnInit: true })(atom(1))
     return { a }
   })
 
@@ -54,7 +51,7 @@ test('persist on atom, loaded manually, empty storage', () => {
   const storage = makeMockStorage()
 
   const $ = store(() => {
-    const a = atom(1).with(persist({ key: 'test', storage }))
+    const a = persist({ key: 'test', storage })(atom(1))
     return { a }
   })
 
@@ -79,7 +76,7 @@ test('persist on atom, loaded manually, from storage', () => {
   const storage = makeMockStorage({ test: '{"value":2,"version":0}' })
 
   const $ = store(() => {
-    const a = atom(1).with(persist({ key: 'test', storage }))
+    const a = persist({ key: 'test', storage })(atom(1))
     return { a }
   })
 
@@ -104,7 +101,7 @@ test('persist on atom, different version', () => {
   const storage = makeMockStorage({ test: '{"value":2,"version":0}' })
 
   const $ = store(() => {
-    const a = atom(1).with(persist({ key: 'test', storage, version: 1 }))
+    const a = persist({ key: 'test', storage, version: 1 })(atom(1))
     return { a }
   })
 
@@ -129,7 +126,7 @@ test('persist on atom, atom name as key', () => {
   const storage = makeMockStorage()
 
   const $ = store(() => {
-    const a = atom(1).with(persist({ key: getAtomName, storage }))
+    const a = persist({ key: getAtomName, storage })(atom(1))
     return { a }
   })
 

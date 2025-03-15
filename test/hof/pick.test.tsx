@@ -1,10 +1,10 @@
 import { expect, expectTypeOf, test } from 'vitest'
-import { store } from '../../src/methods/store'
-import { assertWith } from '../utils'
-import { pick } from '../../src/middleware/pick'
-import { StoreInternals } from '../../src/methods/store'
-import { atom } from '../../src/methods/atom'
-import { pubsub } from '../../src/misc/pubsub'
+import { store } from '../../../src/methods/store'
+import { assertWith } from '../../utils'
+import { pick } from '../../../src/middleware/pick'
+import { StoreInternals } from '../../../src/methods/store'
+import { atom } from '../../../src/methods/atom'
+import { pubsub } from '../../../src/misc/pubsub'
 
 // TODO: this could be a good way to specify whether
 // an optic uses get/set

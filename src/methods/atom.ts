@@ -17,7 +17,6 @@ export type Atom<TValue = unknown> = {
   ): TCustomSelected
   sub(listener: (value: TValue) => void): () => void
   set(value: TValue): void
-  with<TOut>(applyFn: (atom: Atom<TValue>) => TOut): TOut
 }
 
 export type AtomInternals = MakeInternals<{
@@ -98,11 +97,6 @@ const makeSet = (target: Atom & AtomInternals) => (value: any) => {
   pubsub.setKey(target.getInternals().name, value)
 }
 
-const makeWith =
-  (target: Atom & AtomInternals) => (apply: (atom: Atom) => any) => {
-    return apply(target as any)
-  }
-
 /**
  * Creates an atom with the given initial value. The atom's value
  * is persisted within the store.
@@ -159,9 +153,6 @@ export const atom = <TValue>(initialValue: TValue) => {
   const set = ((...pass: Parameters<ReturnType<typeof makeSet>>) =>
     makeSet(target as any)(...pass)) as Atom<TValue>['set']
 
-  const withFn = ((...pass: Parameters<ReturnType<typeof makeWith>>) =>
-    makeWith(target as any)(...pass)) as Atom<TValue>['with']
-
   const target = {
     ...(internals as {}),
 
@@ -204,16 +195,6 @@ export const atom = <TValue>(initialValue: TValue) => {
      * discouraged.
      */
     set,
-
-    /**
-     * Applies a HOF as middleware on the atom. The return type
-     * of the HOF will be the return value of the function, letting
-     * you affect the type of the atom and chain middleware.
-     *
-     * Do not use this outside of a store. In a future version,
-     * the method will not be visible in intellisense outside of the store.
-     */
-    with: withFn,
   }
 
   return target
