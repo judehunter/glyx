@@ -7,7 +7,7 @@ import { pubsub } from '../../src/misc/pubsub'
 
 describe('nested on select', () => {
   test('select.get()', () => {
-    const $ = store(() => {
+    const { $ } = store(() => {
       const counter = atom(5)
 
       const double = nested(
@@ -35,7 +35,7 @@ describe('nested on select', () => {
   })
 
   test('select.get() with args', () => {
-    const $ = store(() => {
+    const { $ } = store(() => {
       const counter = atom(5)
 
       const mult = nested(
@@ -61,7 +61,7 @@ describe('nested on select', () => {
   })
 
   test('select.use()', () => {
-    const $ = store(() => {
+    const { $ } = store(() => {
       const counter = atom(5)
 
       const double = nested(
@@ -94,7 +94,7 @@ describe('nested on select', () => {
 
 describe('nested on atom', () => {
   test('select.get()', () => {
-    const $ = store(() => {
+    const { $ } = store(() => {
       const counter = nested(atom(5), (value) => {
         const double = select(() => value.get() * 2)
 
@@ -115,7 +115,7 @@ describe('nested on atom', () => {
   })
 
   test('select.use()', () => {
-    const $ = store(() => {
+    const { $ } = store(() => {
       const counter = nested(atom(5), (value) => {
         const double = select(() => value.get() * 2)
 

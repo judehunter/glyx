@@ -22,7 +22,7 @@ export type Derived<TValue> = Omit<Atom<TValue>, 'set'>
  *
  * Usage:
  * ```ts
- * const $ = store(() => {
+ * const { $ } = store(() => {
  *   const foo = atom(1)
  *   const bar = derived(() => foo.get() * 2)
  *   return { foo, bar }

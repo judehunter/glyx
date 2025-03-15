@@ -12,7 +12,7 @@ import { pubsub } from '../src/misc/pubsub'
 import { assertWith } from '../src/misc/utils'
 
 test('isolated updates with dependency tracking', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const b = atom(10)
 
@@ -49,7 +49,7 @@ test('isolated updates with dependency tracking', () => {
 })
 
 test('no zombie child problem', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const elems = atom([10, 20])
     return { elems }
   })
@@ -99,7 +99,7 @@ test('no zombie child problem', () => {
 })
 
 test('no infinite loop with custom selector that returns an unstable reference', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const b = select(() => a.get() + 1)
 
@@ -122,7 +122,7 @@ test('no infinite loop with custom selector that returns an unstable reference',
 })
 
 test('component unsubscribes', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const b = select(() => a.get() + 1)
     return { a, b }
@@ -146,7 +146,7 @@ test('component unsubscribes', () => {
 
 // this is handled by React, not Glyx
 test('updates are batched', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const b = atom(2)
     const c = select(() => a.get() + b.get())
@@ -167,7 +167,7 @@ test('updates are batched', () => {
 })
 
 test('action inside store', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const increment = () => a.set(a.get() + 1)
     return { a, increment }
@@ -186,7 +186,7 @@ test('action inside store', () => {
 })
 
 test('selectors are not called when something else updates', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const b = atom(2)
     return { a, b }
@@ -211,7 +211,7 @@ test('selectors are not called when something else updates', () => {
 })
 
 test('select fails gracefully on error thrown in selector', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const b = select((shouldThrow: boolean) => {
       if (shouldThrow) {
@@ -239,7 +239,7 @@ test('select fails gracefully on error thrown in selector', () => {
 
 // declare const map: any
 test('advanced use case', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const $user = group(() => {
       const user = atom({ name: 'John' })
       const loginError = atom<Error | undefined>(undefined)
@@ -296,7 +296,7 @@ test('advanced use case', () => {
 // todo: select selector gets another select selector and tracks deps correctly (should work already since only the first select will start tracking deps at that point)
 
 test('works without flushing', async () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     return { a }
   })

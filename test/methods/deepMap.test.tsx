@@ -16,7 +16,7 @@ test('deepMap.pick() - single key, unchanged structure', () => {
       },
     },
   })
-  const $ = store(() => {
+  const { $ } = store(() => {
     const foo = deepMap(obj)
     return { foo }
   })
@@ -173,7 +173,7 @@ test('deepMap.pick() - multi key, unchanged structure', () => {
     },
   })
 
-  const $ = store(() => {
+  const { $ } = store(() => {
     const foo = deepMap(obj)
     return { foo }
   })
@@ -308,7 +308,7 @@ test.only('deepMap.pick() - multi key, changed structure', () => {
       | { alt: { nested: number } },
   })
 
-  const $ = store(() => {
+  const { $ } = store(() => {
     const foo = deepMap(obj)
     return { foo }
   })

@@ -189,7 +189,7 @@ const getLeafPaths = <T>(value: T) => {
  *
  * Usage:
  * ```ts
- * const $ = store(() => {
+ * const { $ } = store(() => {
  *   const foo = deepMap({
  *     a: {
  *       b: 1,
@@ -343,6 +343,8 @@ const data = select(() => query.get(x => x.data))
 
 */
 
-const deep = <T extends Atom<any> | Select<any, any>>() => (target: T) => {
-  return target
-}
+const deep =
+  <T extends Atom<any> | Select<any, any>>() =>
+  (target: T) => {
+    return target
+  }

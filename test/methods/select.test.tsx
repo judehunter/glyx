@@ -9,7 +9,7 @@ import { assertWith } from '../../src/misc/utils'
 import React from 'react'
 
 test('select.get() with atom as dependency', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const counter = atom(10)
 
     const double = select(() => counter.get() * 2)
@@ -35,7 +35,7 @@ test('select.get() with atom as dependency', () => {
 })
 
 test('select.get() with transitive dependency of another select', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const counter = atom(10)
 
     const double = select(() => counter.get() * 2)
@@ -72,7 +72,7 @@ test('select.get() with transitive dependency of another select', () => {
 })
 
 test('select.use() with atom as dependency', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const counter = atom(10)
 
     const double = select(() => counter.get() * 2)
@@ -93,7 +93,7 @@ test('select.use() with atom as dependency', () => {
 })
 
 test('select.use() with transitive dependency of another select', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const counter = atom(10)
 
     const double = select(() => counter.get() * 2)
@@ -119,7 +119,7 @@ test('select.use() with transitive dependency of another select', () => {
 })
 
 test('select.get() with selector args', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const counter = atom(10)
 
     const multi = select((x) => counter.get() * x)
@@ -138,7 +138,7 @@ test('select.get() with selector args', () => {
 })
 
 test('select.use() with selector args', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const counter = atom(10)
 
     const multi = select((x) => counter.get() * x)
@@ -157,7 +157,7 @@ test('select.use() with selector args', () => {
 })
 
 test('select.get() with two atoms as dependencies', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const b = atom(10)
 
@@ -180,7 +180,7 @@ test('select.get() with two atoms as dependencies', () => {
 })
 
 test('select.use() with two atoms as dependencies', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const b = atom(10)
 
@@ -209,7 +209,7 @@ test('select.use() with two atoms as dependencies', () => {
 })
 
 test('select.get() with custom selector', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const counter = atom(10)
 
     const mult = select((factor) => counter.get() * factor)
@@ -222,7 +222,7 @@ test('select.get() with custom selector', () => {
 })
 
 test('select.get() with custom selector that accesses another atom', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(10)
     const b = atom(100)
 
@@ -241,7 +241,7 @@ test('select.get() with custom selector that accesses another atom', () => {
 })
 
 test('select.use() with custom selector', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(10)
 
     const mult = select((factor) => a.get() * factor)
@@ -262,7 +262,7 @@ test('select.use() with custom selector', () => {
 })
 
 test('select.use() with custom selector that accesses another atom', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(10)
     const b = atom(100)
 
@@ -291,7 +291,7 @@ test('select.use() with custom selector that accesses another atom', () => {
 })
 
 test('select.use() tracks deps of selector and custom selector independently', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const b = atom(10)
 
@@ -326,7 +326,7 @@ test('select.use() tracks deps of selector and custom selector independently', (
 })
 
 test('select.use() with variable selector args from component state', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
 
     const mult = select((factor) => a.get() * factor)
@@ -354,7 +354,7 @@ test('select.use() with variable selector args from component state', () => {
 })
 
 test('select.use() with custom selector closing over component state', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
 
     const plusOne = select(() => a.get() + 1)
@@ -384,7 +384,7 @@ test('select.use() with custom selector closing over component state', () => {
 test('select with args doesnt rerun deps tracking')
 
 test('select with dynamicDeps', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const b = atom(2)
 

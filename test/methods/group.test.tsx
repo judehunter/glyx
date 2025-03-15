@@ -7,7 +7,7 @@ import { Group } from '../../src/methods/group'
 import { pubsub } from '../../src/misc/pubsub'
 
 test('group with nested atom', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const canvas = group(() => {
       const nodeCount = atom(10)
 
@@ -30,7 +30,7 @@ test('group with nested atom', () => {
 })
 
 test('nested groups with atoms', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const b = group(() => {
       const c = atom(2)
@@ -66,7 +66,7 @@ test('nested groups with atoms', () => {
 })
 
 test('group.pick() is fine-grained', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const $group = group(() => {
       const a = atom(1)
       const b = atom(2)
@@ -97,7 +97,7 @@ test('group.pick() is fine-grained', () => {
 })
 
 test('separate group.pick() calls on the same group have separate deps', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const $group = group(() => {
       const a = atom(1)
       const b = atom(2)
@@ -132,7 +132,7 @@ test('separate group.pick() calls on the same group have separate deps', () => {
 })
 
 test('store.pick()', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const b = atom(2)
 
@@ -172,7 +172,7 @@ test('group.with() middleware on all atoms', () => {
     return group as T
   }
 
-  const $ = store(() => {
+  const { $ } = store(() => {
     const $group = group(() => {
       const a = atom(1)
       const b = atom(1)
@@ -193,7 +193,7 @@ test('group.with() middleware on all atoms', () => {
 })
 
 test('group.get()', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const $group = group(() => {
       const a = atom(1)
       const b = atom(2)
@@ -214,7 +214,7 @@ test('group.get()', () => {
 })
 
 test('group.use()', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const $group = group(() => {
       const a = atom(1)
       const b = atom(2)

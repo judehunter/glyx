@@ -19,18 +19,25 @@ const useContextOrThrow = <T,>(context: Context<T>, name: string) => {
   return value
 }
 
-export const ctx = <TProps, TDef>(def: (props: TProps) => TDef) => {
+export const ctx = <TProps, TDef>(
+  def: (props: TProps) => Record<string, TDef>,
+) => {
   let name: string | undefined = undefined
 
   const reactCtx = createContext<TDef | undefined>(undefined)
 
-  const Provider = (props: TProps & { children: ReactNode }) => {
-    const [calledDef, setCalledDef] = useState(() => def(props))
+  const Provider = (props: TProps & { id: string; children: ReactNode }) => {
+    const localScopeName = name
+    if (!localScopeName) {
+      throw new Error('ctx must be named')
+    }
+    const nameWithId = `${localScopeName}-${props.id}`
+    const [calledDef, setCalledDef] = useState(() => def(props)[nameWithId])
 
     useEffect(() => {
       if (!calledDef) {
         // for strict mode
-        setCalledDef(def(props))
+        setCalledDef(def(props)[nameWithId])
       }
       return () => {
         assertWith<StoreInternals>(calledDef)

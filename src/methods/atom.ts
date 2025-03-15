@@ -104,7 +104,7 @@ const makeSet = (target: Atom & AtomInternals) => (value: any) => {
  * Usage:
  *
  * ```tsx
- * const $ = store(() => {
+ * const { $ } = store(() => {
  *   const foo = atom(1)
  *   return { foo }
  * })

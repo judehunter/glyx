@@ -7,7 +7,7 @@ npm i glyx
 ```
 
 ```ts
-const $ = store(() => {
+const { $ } = store(() => {
   const count = atom(1)
   const expensive = derived(() => count.get() ** 10)
   const mult = select((factor: number) => count.get() * factor)

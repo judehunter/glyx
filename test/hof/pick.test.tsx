@@ -9,7 +9,7 @@ import { pubsub } from '../../../src/misc/pubsub'
 // TODO: this could be a good way to specify whether
 // an optic uses get/set
 test('pick method from atom', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1).with(pick(['set']))
 
     return { a }

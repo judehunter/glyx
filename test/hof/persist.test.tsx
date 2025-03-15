@@ -14,7 +14,7 @@ const makeMockStorage = (init = {}) => {
 test('persist on atom, loaded instantly, empty storage', () => {
   const storage = makeMockStorage()
 
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = persist({ key: 'test', storage, loadOnInit: true })(atom(1))
     return { a }
   })
@@ -32,7 +32,7 @@ test('persist on atom, loaded instantly, empty storage', () => {
 test('persist on atom, loaded instantly, from storage', () => {
   const storage = makeMockStorage({ test: '{"value":2,"version":0}' })
 
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = persist({ key: 'test', storage, loadOnInit: true })(atom(1))
     return { a }
   })
@@ -50,7 +50,7 @@ test('persist on atom, loaded instantly, from storage', () => {
 test('persist on atom, loaded manually, empty storage', () => {
   const storage = makeMockStorage()
 
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = persist({ key: 'test', storage })(atom(1))
     return { a }
   })
@@ -75,7 +75,7 @@ test('persist on atom, loaded manually, empty storage', () => {
 test('persist on atom, loaded manually, from storage', () => {
   const storage = makeMockStorage({ test: '{"value":2,"version":0}' })
 
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = persist({ key: 'test', storage })(atom(1))
     return { a }
   })
@@ -100,7 +100,7 @@ test('persist on atom, loaded manually, from storage', () => {
 test('persist on atom, different version', () => {
   const storage = makeMockStorage({ test: '{"value":2,"version":0}' })
 
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = persist({ key: 'test', storage, version: 1 })(atom(1))
     return { a }
   })
@@ -125,7 +125,7 @@ test('persist on atom, different version', () => {
 test('persist on atom, atom name as key', () => {
   const storage = makeMockStorage()
 
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = persist({ key: getAtomName, storage })(atom(1))
     return { a }
   })

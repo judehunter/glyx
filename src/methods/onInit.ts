@@ -7,7 +7,7 @@ import { getCurrentStoreRef } from '../misc/currentStore'
  *
  * Usage:
  * ```ts
- * const $ = store(() => {
+ * const { $ } = store(() => {
  *   const a = atom(1)
  *   // a.get() is not allowed here!
  *   onInit(() => {

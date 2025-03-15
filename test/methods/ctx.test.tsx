@@ -25,7 +25,7 @@ test('basic', async () => {
 
   const Parent = () => {
     return (
-      <$$canvas>
+      <$$canvas id="1">
         <Child />
       </$$canvas>
     )
@@ -34,16 +34,20 @@ test('basic', async () => {
   const { findByTestId } = render(<Parent />)
 
   expect(await findByTestId('nodes-length')).toHaveTextContent('2')
+
+  expect(pubsub.getAll()).toEqual({
+    '$$canvas-1.nodes': [{ id: '1' }, { id: '2' }],
+    '$$canvas-1.edges': [{ id: '1', source: '1', target: '2' }],
+  })
 })
 
 test('parameterized', async () => {
-  const { $$profile } = ctx(
-    ({ initial, id }: { initial: string; id: string }) =>
-      store(() => {
-        const userName = atom(initial)
+  const { $$profile } = ctx(({ initial }: { initial: string }) =>
+    store(() => {
+      const userName = atom(initial)
 
-        return { userName }
-      }, id),
+      return { userName }
+    }),
   )
 
   const Child = ({ testId }: { testId: string }) => {
@@ -57,10 +61,10 @@ test('parameterized', async () => {
   const Parent = () => {
     return (
       <>
-        <$$profile initial="John" id="$profile1">
+        <$$profile initial="John" id="1">
           <Child testId="user-name-1" />
         </$$profile>
-        <$$profile initial="Alex" id="$profile2">
+        <$$profile initial="Alex" id="2">
           <Child testId="user-name-2" />
         </$$profile>
       </>
@@ -74,3 +78,5 @@ test('parameterized', async () => {
 })
 
 test('state update', () => {})
+
+test('unmounts and cleans up')

@@ -5,7 +5,7 @@ import { act } from '@testing-library/react'
 import { pubsub } from '../../src/misc/pubsub'
 
 test('derived.get()', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const count = atom(1)
     const double = derived(() => count.get() * 2)
 
@@ -33,7 +33,7 @@ test('derived.get()', () => {
 })
 
 test('derived.use()', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const count = atom(1)
     const double = derived(() => count.get() * 2)
 
@@ -53,7 +53,7 @@ test('derived.use()', () => {
 })
 
 test('derived.use() on two atoms', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const b = atom(2)
     const sum = derived(() => a.get() + b.get())
@@ -81,7 +81,7 @@ test('derived.use() on two atoms', () => {
 })
 
 test('derived.use() on a derived', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const double = derived(() => a.get() * 2)
     const quadruple = derived(() => double.get() * 2)
@@ -102,7 +102,7 @@ test('derived.use() on a derived', () => {
 })
 
 test('derived.use() on a select', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const double = select(() => a.get() * 2)
     const quadruple = derived(() => double().get() * 2)
@@ -123,7 +123,7 @@ test('derived.use() on a select', () => {
 })
 
 test('dependency list does not include the atoms that derived atoms are derived from', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const double = derived(() => a.get() * 2)
     const quadruple = select(() => double.get() * 2)
@@ -139,7 +139,7 @@ test('dependency list does not include the atoms that derived atoms are derived 
 test('derived function is called once even when two deps change', async () => {
   const spy = vi.fn()
 
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const b = atom(2)
     const sum = derived(() => {

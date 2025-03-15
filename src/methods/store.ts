@@ -18,7 +18,7 @@ export type StoreInternals = MakeInternals<
  *
  * Usage:
  * ```ts
- * const $ = store(() => {
+ * const { $ } = store(() => {
  *   const a = atom(1)
  *   return { a }
  * })
@@ -33,7 +33,7 @@ export type StoreInternals = MakeInternals<
  * meaning it will be automatically assigned a serial name. You can specify
  * a name for a primitive you don't want to return by using the `name` middleware.
  * ```ts
- * const $ = store(() => {
+ * const { $ } = store(() => {
  *   const a = atom(1).with(name('foo'))
  *   const getA = () => a.get()
  *   return { getA }
@@ -46,43 +46,49 @@ export type StoreInternals = MakeInternals<
  * @param defFn define the store inside this callback, and return everything.
  * @returns the initialized store, ready to use.
  */
-export const store = <T extends Record<string, any>>(
-  defFn: () => T,
-  name: string = '$',
-) => {
-  const inits = [] as (() => void | (() => void))[]
-  setCurrentStore({
-    addOnInit: (fn) => {
-      inits.push(fn)
+export const store = <T extends Record<string, any>>(defFn: () => T) => {
+  return new Proxy(
+    {},
+    {
+      get(target, prop) {
+        const name = prop.toString()
+
+        const inits = [] as (() => void | (() => void))[]
+        setCurrentStore({
+          addOnInit: (fn) => {
+            inits.push(fn)
+          },
+        })
+
+        const def = defFn()
+        const defGroup = group(() => def)
+
+        assertWith<GroupInternals>(defGroup)
+
+        // todo: name
+        defGroup.getInternals().setup(name)
+
+        const destroys = [] as (() => void)[]
+        for (const fn of inits) {
+          const destroy = fn()
+          if (destroy) {
+            destroys.push(destroy)
+          }
+        }
+
+        unsetCurrentStore()
+
+        const internals = makeInternals({
+          ...defGroup.getInternals(),
+          destroy: () => {
+            for (const destroy of destroys) {
+              destroy()
+            }
+          },
+        })
+
+        return { ...defGroup, ...internals }
+      },
     },
-  })
-
-  const def = defFn()
-  const defGroup = group(() => def)
-
-  assertWith<GroupInternals>(defGroup)
-
-  // todo: name
-  defGroup.getInternals().setup(name)
-
-  const destroys = [] as (() => void)[]
-  for (const fn of inits) {
-    const destroy = fn()
-    if (destroy) {
-      destroys.push(destroy)
-    }
-  }
-
-  unsetCurrentStore()
-
-  const internals = makeInternals({
-    ...defGroup.getInternals(),
-    destroy: () => {
-      for (const destroy of destroys) {
-        destroy()
-      }
-    },
-  })
-
-  return { ...defGroup, ...internals } as Store<T>
+  ) as Record<string, Store<T>> & { ['DESTRUCTURE TO USE!']: null }
 }

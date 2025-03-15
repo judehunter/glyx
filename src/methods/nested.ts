@@ -80,7 +80,7 @@ function nested<TAtom extends Atom<any>, TNested>(
  *
  * Comparison:
  * ```ts
- * const $group = group(() => {
+ * const { $ }group = group(() => {
  *   const a = atom(1)
  *   return { a }
  * })

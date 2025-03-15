@@ -3,7 +3,7 @@ import { atom, name, store } from '../../src'
 import { pubsub } from '../../src/misc/pubsub'
 
 test('omit method from atom', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     name('foo')(atom(1))
 
     return {}

@@ -4,7 +4,7 @@ import { pubsub } from '../../src/misc/pubsub'
 
 test('watch callback fires once for multiple deps', () => {
   const spy = vi.fn()
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
     const b = atom(2)
 

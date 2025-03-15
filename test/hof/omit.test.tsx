@@ -2,7 +2,7 @@ import { expect, expectTypeOf, test } from 'vitest'
 import { atom, omit, store } from '../../src'
 
 test('omit method from atom', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = omit(['get'])(atom(1))
 
     return { a }

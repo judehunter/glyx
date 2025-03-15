@@ -40,14 +40,14 @@ export type GroupInternals = MakeInternals<{
  * them in an object, like:
  * ```ts
  * // do not do this!
- * const $group = {
+ * const { $ }group = {
  *   a: atom(...),
  *   b: select(() => ...),
  * }
  * ```
  * But instead, the standard declaration syntax is used, just like in a store.
  * ```ts
- * const $group = group(() => {
+ * const { $ }group = group(() => {
  *   const a = atom(...)
  *   const b = select(() => ...)
  *   return { a, b }
@@ -125,8 +125,8 @@ export const group = <TReturn extends Record<string, any>>(
      *
      * Usage:
      * ```ts
-     * const $ = store(() => {
-     *   const $group = group(() => {
+     * const { $ } = store(() => {
+     *   const { $ }group = group(() => {
      *     const a = atom(1)
      *     const b = atom(2)
      *     const c = atom(3)

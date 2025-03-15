@@ -6,7 +6,7 @@ import { act } from 'react'
 import { pubsub } from '../../src/misc/pubsub'
 
 test('single listener, no props', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const e = event()
 
     return { e }
@@ -23,7 +23,7 @@ test('single listener, no props', () => {
 })
 
 test('multiple listeners, no props', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const e = event()
 
     return { e }
@@ -43,7 +43,7 @@ test('multiple listeners, no props', () => {
 })
 
 test('single listener, with props', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const e = event<number>()
 
     return { e }
@@ -60,7 +60,7 @@ test('single listener, with props', () => {
 })
 
 test('.useOn', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const e = event<number>()
 
     return { e }
@@ -84,7 +84,7 @@ test('.useOn', () => {
 })
 
 test('.useOn registers and unregisters', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const e = event()
 
     return { e }

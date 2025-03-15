@@ -8,7 +8,7 @@ import { pubsub } from '../../src/misc/pubsub'
 import React from 'react'
 
 test('.get() of initial value', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const counter = atom(5)
 
     return { counter }
@@ -18,7 +18,7 @@ test('.get() of initial value', () => {
 })
 
 test('.set()', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const counter = atom(5)
 
     return { counter }
@@ -33,7 +33,7 @@ test('.set()', () => {
 })
 
 test('.sub()', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const counter = atom(0)
 
     return { counter }
@@ -55,7 +55,7 @@ test('.sub()', () => {
 })
 
 test('.use()', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const counter = atom(10)
 
     return { counter }
@@ -84,7 +84,7 @@ test('.use()', () => {
 })
 
 test('.get() with custom selector', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(10)
 
     return { a }
@@ -94,7 +94,7 @@ test('.get() with custom selector', () => {
 })
 
 test('.use() with custom selector', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(10)
 
     return { a }
@@ -113,7 +113,7 @@ test('.use() with custom selector', () => {
 })
 
 test('.get() with custom selector that access another atom', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(10)
     const b = atom(100)
 
@@ -124,7 +124,7 @@ test('.get() with custom selector that access another atom', () => {
 })
 
 test('.use() with custom selector that access another atom', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(10)
     const b = atom(100)
 
@@ -151,7 +151,7 @@ test('.use() with custom selector that access another atom', () => {
 })
 
 test('.use() with custom selector closing over component state', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
 
     return { a }
@@ -177,7 +177,7 @@ test('.use() with custom selector closing over component state', () => {
 })
 
 test('anonymous atom', () => {
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = atom(1)
 
     const getA = a.get
@@ -210,7 +210,7 @@ test('HOF get', () => {
     }) as T
   }
 
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = withPlusOne(atom(1))
 
     return { a }
@@ -228,7 +228,7 @@ test('HOF set', () => {
     }) as T
   }
 
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = withAppend(atom('a'))
 
     return { a }
@@ -260,7 +260,7 @@ test('HOF chaining', () => {
     }) as T
   }
 
-  const $ = store(() => {
+  const { $ } = store(() => {
     const a = withRepeat(withAppend(atom('a')))
 
     return { a }
@@ -275,18 +275,15 @@ test('HOF chaining', () => {
 })
 
 test('fails on duplicate name', () => {
-  store(() => {
-    const a = atom(1)
-
-    return { a }
-  })
-
-  const makeSecondStore = () =>
-    store(() => {
+  const makeStore = () => {
+    const { $ } = store(() => {
       const a = atom(1)
 
       return { a }
     })
+  }
 
-  expect(makeSecondStore).toThrow('Name $.a already exists')
+  makeStore()
+
+  expect(makeStore).toThrow('Name $.a already exists')
 })

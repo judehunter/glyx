@@ -9,7 +9,7 @@ import { onInit } from './onInit'
  * Usage:
  *
  * ```tsx
- * const $ = store(() => {
+ * const { $ } = store(() => {
  *   const a = atom(1)
  *   const b = atom(2)
  *

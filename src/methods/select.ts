@@ -148,7 +148,7 @@ const makeWith = (target: any) => (apply: (atom: any) => any) => {
  *
  * Usage:
  * ```ts
- * const $ = store(() => {
+ * const { $ } = store(() => {
  *   const counter = atom(1)
  *   const double = select(() => counter.get() * 2)
  *   return { double }
