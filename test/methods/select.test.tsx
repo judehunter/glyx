@@ -419,12 +419,3 @@ test('select with dynamicDeps', () => {
   expect(calls1()).toEqual([[1], [3]])
   expect(calls2()).toEqual([[2], [4]])
 })
-
-type Foo = {a: number, b: string}
-
-const x = select(<T extends keyof Foo,>(x: T) => null! as Foo[T])
-
-const y = x('b')
-
-const z = y.get()
-
