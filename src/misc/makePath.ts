@@ -10,7 +10,7 @@ import {
 } from '../methods/atom'
 import { CalledSelect, Select, select } from '../methods/select'
 import { noTrack } from './deps'
-import { isObject } from './isObject'
+import { isActualObject } from './isObject'
 import { name } from '../hof/name'
 import { assertWith } from './utils'
 
@@ -39,7 +39,7 @@ export const makePath = <T extends AtomLike>(target: T) => {
 
     let nestedObj: any = noTrack(() => target.get())
 
-    if (!isObject(nestedObj)) {
+    if (!isActualObject(nestedObj)) {
       throw new Error('the atom value is not an object')
     }
 
@@ -53,7 +53,7 @@ export const makePath = <T extends AtomLike>(target: T) => {
       }
 
       // if it's an object, traverse down
-      if (isObject(nestedObj)) {
+      if (isActualObject(nestedObj)) {
         continue
       }
 
@@ -106,7 +106,7 @@ export const makePath = <T extends AtomLike>(target: T) => {
         break
       }
 
-      if (isObject(nestedObj)) {
+      if (isActualObject(nestedObj)) {
         continue
       }
 

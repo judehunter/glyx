@@ -10,6 +10,11 @@ import { makePath } from '../misc/makePath'
 import * as TB from 'ts-toolbelt'
 import { CalledSelect } from './select'
 import { getCurrentStore, getCurrentStoreRef } from '../misc/currentStore'
+import { IsActualObject } from '../misc/isObject'
+
+type PathFn<TValue> = <TPath extends string>(
+  path: TB.Function.AutoPath<TValue, TPath>,
+) => CalledSelect<TB.Object.Path<TValue, TB.String.Split<TPath, '.'>>>
 
 export type AtomLike<TValue = unknown> = {
   get<TCustomSelected = TValue>(
@@ -21,10 +26,7 @@ export type AtomLike<TValue = unknown> = {
   ): TCustomSelected
   sub(listener: (value: TValue) => void): () => void
   set(value: TValue): void
-  path<TPath extends string>(
-    path: TB.Function.AutoPath<TValue, TPath>,
-  ): CalledSelect<TB.Object.Path<TValue, TB.String.Split<TPath, '.'>>>
-}
+} & (IsActualObject<TValue> extends true ? { path: PathFn<TValue> } : {})
 
 export type Atom<TValue = unknown> = AtomLike<TValue>
 
@@ -232,5 +234,5 @@ export const atom = <TValue>(
      */
   }
 
-  return { ...target, path: makePath(target as any) as Atom<TValue>['path'] }
+  return { ...target, path: makePath(target as any) } as Atom<TValue>
 }

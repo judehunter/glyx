@@ -19,7 +19,9 @@ export type CalledSelect<TSelected = unknown, TNested = {}> = {
   sub(listener: (value: TSelected) => void): () => void
 } & TNested
 
-export type Select<TArg, TReturn> = (...arg: TArg extends undefined ? [] : [TArg]) => CalledSelect<TReturn>
+export type Select<TArg, TReturn> = (
+  ...arg: TArg extends undefined ? [] : [TArg]
+) => CalledSelect<TReturn>
 
 export type SelectInternals = MakeInternals<{
   type: 'select'
