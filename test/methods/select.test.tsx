@@ -122,7 +122,7 @@ test('select.get() with selector args', () => {
   const { $ } = store(() => {
     const counter = atom(10)
 
-    const multi = select((x) => counter.get() * x)
+    const multi = select((x: number) => counter.get() * x)
 
     return { counter, multi }
   })
@@ -141,7 +141,7 @@ test('select.use() with selector args', () => {
   const { $ } = store(() => {
     const counter = atom(10)
 
-    const multi = select((x) => counter.get() * x)
+    const multi = select((x: number) => counter.get() * x)
 
     return { counter, multi }
   })
@@ -212,7 +212,7 @@ test('select.get() with custom selector', () => {
   const { $ } = store(() => {
     const counter = atom(10)
 
-    const mult = select((factor) => counter.get() * factor)
+    const mult = select((factor: number) => counter.get() * factor)
 
     return { counter, mult }
   })
@@ -226,7 +226,7 @@ test('select.get() with custom selector that accesses another atom', () => {
     const a = atom(10)
     const b = atom(100)
 
-    const mult = select((factor) => a.get() * factor)
+    const mult = select((factor: number) => a.get() * factor)
 
     return { a, b, mult }
   })
@@ -244,7 +244,7 @@ test('select.use() with custom selector', () => {
   const { $ } = store(() => {
     const a = atom(10)
 
-    const mult = select((factor) => a.get() * factor)
+    const mult = select((factor: number) => a.get() * factor)
 
     return { a, mult }
   })
@@ -266,7 +266,7 @@ test('select.use() with custom selector that accesses another atom', () => {
     const a = atom(10)
     const b = atom(100)
 
-    const mult = select((factor) => a.get() * factor)
+    const mult = select((factor: number) => a.get() * factor)
 
     return { a, b, mult }
   })
@@ -329,7 +329,7 @@ test('select.use() with variable selector args from component state', () => {
   const { $ } = store(() => {
     const a = atom(1)
 
-    const mult = select((factor) => a.get() * factor)
+    const mult = select((factor: number) => a.get() * factor)
 
     return { a, mult }
   })
@@ -419,3 +419,12 @@ test('select with dynamicDeps', () => {
   expect(calls1()).toEqual([[1], [3]])
   expect(calls2()).toEqual([[2], [4]])
 })
+
+type Foo = {a: number, b: string}
+
+const x = select(<T extends keyof Foo,>(x: T) => null! as Foo[T])
+
+const y = x('b')
+
+const z = y.get()
+

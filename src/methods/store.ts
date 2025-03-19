@@ -53,10 +53,18 @@ export const store = <T extends Record<string, any>>(defFn: () => T) => {
       get(target, prop) {
         const name = prop.toString()
 
+        let inited = false
         const inits = [] as (() => void | (() => void))[]
+        const destroys = [] as (() => void)[]
         setCurrentStore({
           addOnInit: (fn) => {
             inits.push(fn)
+            if (inited) {
+              const destroy = fn()
+              if (destroy) {
+                destroys.push(destroy)
+              }
+            }
           },
         })
 
@@ -68,7 +76,6 @@ export const store = <T extends Record<string, any>>(defFn: () => T) => {
         // todo: name
         defGroup.getInternals().setup(name)
 
-        const destroys = [] as (() => void)[]
         for (const fn of inits) {
           const destroy = fn()
           if (destroy) {
@@ -86,6 +93,8 @@ export const store = <T extends Record<string, any>>(defFn: () => T) => {
             }
           },
         })
+
+        inited = true
 
         return { ...defGroup, ...internals }
       },

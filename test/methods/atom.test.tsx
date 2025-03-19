@@ -1,4 +1,4 @@
-import { expect, vi } from 'vitest'
+import { describe, expect, vi } from 'vitest'
 import { test } from 'vitest'
 import { store, atom } from '../../src/index'
 import { act, render, renderHook } from '@testing-library/react'
@@ -286,4 +286,108 @@ test('fails on duplicate name', () => {
   makeStore()
 
   expect(makeStore).toThrow('Name $.a already exists')
+})
+
+describe('deep', () => {
+  test('flow with unchanged structure', () => {
+    const obj = Object.freeze({
+      A: 1,
+      B: {
+        BA: 2,
+        BB: {
+          BBA: 3,
+          BBB: 4,
+        },
+      },
+    })
+
+    const { $ } = store(() => {
+      const foo = atom(obj)
+
+      return { foo }
+    })
+
+    expect(pubsub.getAll()).toEqual({ '$.foo': obj })
+
+    const calls1 = makeHookCallSpy(() => $.foo.path('B.BA').use())
+    const calls2 = makeHookCallSpy(() => $.foo.path('B.BB.BBB').use())
+
+    expect(pubsub.getListeners()['$.foo/B.BA'].length).toBe(1)
+    expect(pubsub.getListeners()['$.foo/B.BB.BBB'].length).toBe(1)
+
+    expect(pubsub.getAll()).toEqual({
+      '$.foo': obj,
+      '$.foo/B.BA': 0,
+      '$.foo/B.BB.BBB': 0,
+    })
+
+    expect(calls1()).toEqual([[2]])
+    expect(calls2()).toEqual([[4]])
+
+    act(() => {
+      $.foo.path('B.BA').set(5)
+      pubsub.flush()
+    })
+
+    expect(pubsub.getAll()).toEqual({
+      '$.foo': obj,
+      '$.foo/B.BA': 1,
+      '$.foo/B.BB.BBB': 0,
+    })
+
+    expect(calls1()).toEqual([[2], [5]])
+    expect(calls2()).toEqual([[4]])
+
+    act(() => {
+      $.foo.path('B.BB.BBB').set(6)
+      pubsub.flush()
+    })
+
+    expect(pubsub.getAll()).toEqual({
+      '$.foo': obj,
+      '$.foo/B.BA': 1,
+      '$.foo/B.BB.BBB': 1,
+    })
+
+    expect(calls1()).toEqual([[2], [5]])
+    expect(calls2()).toEqual([[4], [6]])
+  })
+
+  test('flow with changed structure (undefined)', () => {
+    const obj = Object.freeze({
+      A: {
+        B: {
+          C: 1,
+        } as
+          | {
+              C: number
+            }
+          | undefined,
+      },
+    })
+
+    const { $ } = store(() => {
+      const foo = atom(obj)
+
+      return { foo }
+    })
+
+    const calls = makeHookCallSpy(() => $.foo.path('A.B.C').use())
+
+    expect(calls()).toEqual([[1]])
+
+    act(() => {
+      $.foo.path('A.B').set(undefined)
+      pubsub.flush()
+    })
+
+    expect(calls()).toEqual([[1], [undefined]])
+
+    act(() => {
+      $.foo.path('A.B').set({ C: 2 })
+      pubsub.flush()
+    })
+
+    expect(calls()).toEqual([[1], [undefined], [2]])
+  })
 })

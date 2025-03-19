@@ -1,6 +1,6 @@
 export const name =
   <T extends Record<string, any>>(name: string) =>
-  (obj: T) => {
+  <T2 extends T>(obj: T2) => {
     ;(obj as any).setPartialInternals({ name } as any)
-    return obj as any as T
+    return obj as any as T2
   }

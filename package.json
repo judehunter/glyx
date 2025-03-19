@@ -38,6 +38,7 @@
     "@types/react": "^19.0.6",
     "jsdom": "^26.0.0",
     "react": "^19.0.0",
+    "ts-toolbelt": "^9.6.0",
     "typescript": "^5.7.3",
     "unbuild": "^3.5.0",
     "vitest": "^3.0.3"

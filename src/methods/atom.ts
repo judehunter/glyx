@@ -6,8 +6,12 @@ import { identity, uniqueDeps } from '../misc/utils'
 import { onInit } from './onInit'
 import { MakeInternals, makeInternals } from '../misc/makeInternals'
 import { pubsub } from '../misc/pubsub'
+import { makePath } from '../misc/makePath'
+import * as TB from 'ts-toolbelt'
+import { CalledSelect } from './select'
+import { getCurrentStore, getCurrentStoreRef } from '../misc/currentStore'
 
-export type Atom<TValue = unknown> = {
+export type AtomLike<TValue = unknown> = {
   get<TCustomSelected = TValue>(
     customSelector?: (value: TValue) => TCustomSelected,
   ): TCustomSelected
@@ -17,7 +21,16 @@ export type Atom<TValue = unknown> = {
   ): TCustomSelected
   sub(listener: (value: TValue) => void): () => void
   set(value: TValue): void
+  path<TPath extends string>(
+    path: TB.Function.AutoPath<TValue, TPath>,
+  ): CalledSelect<TB.Object.Path<TValue, TB.String.Split<TPath, '.'>>>
 }
+
+export type Atom<TValue = unknown> = AtomLike<TValue>
+
+export type InferAtomValue<T extends Atom> = T extends Atom<infer TValue>
+  ? TValue
+  : never
 
 export type AtomInternals = MakeInternals<{
   type: 'atom'
@@ -123,7 +136,10 @@ const makeSet = (target: Atom & AtomInternals) => (value: any) => {
  *
  * @param initialValue - The initial value of the atom.
  */
-export const atom = <TValue>(initialValue: TValue) => {
+export const atom = <TValue>(
+  initialValue: TValue,
+  { name }: { name?: string } = {},
+) => {
   const internals = makeInternals({
     type: 'atom',
     setup: (name: string) => {
@@ -133,12 +149,12 @@ export const atom = <TValue>(initialValue: TValue) => {
 
   onInit(() => {
     const gotInternals = internals.getInternals() as any
-    const name = gotInternals.name ?? pubsub.getAnonName()
+    const resolvedName = name ?? gotInternals.name ?? pubsub.getAnonName()
     if (!gotInternals.name) {
-      internals.setPartialInternals({ name } as any)
+      internals.setPartialInternals({ name: resolvedName } as any)
     }
-    pubsub.assertNameNotExists(name)
-    pubsub.setKeyInitialValue(name, initialValue)
+    pubsub.assertNameNotExists(resolvedName)
+    pubsub.setKeyInitialValue(resolvedName, initialValue)
   })
 
   const get = ((...pass: Parameters<ReturnType<typeof makeGet>>) =>
@@ -195,7 +211,26 @@ export const atom = <TValue>(initialValue: TValue) => {
      * discouraged.
      */
     set,
+
+    /**
+     * Allows to dot-access nested properties of the atom value.
+     *
+     * This is crucial for enabling fine-reactivity. Subscribers of
+     * nested paths will only be notified when that part of the state changes.
+     * Note that, currently, this requires that you `.set()` just the part
+     * of the state that changed. In other words, there is no automatic
+     * nested change detection.
+     *
+     * Usage:
+     *
+     * ```tsx
+     * const obj = atom({ a: { b: 1 } })
+     * $.path('a.b').get()
+     * $.path('a.b').use()
+     * $.path('a.b').set(2)
+     * ```
+     */
   }
 
-  return target
+  return { ...target, path: makePath(target as any) as Atom<TValue>['path'] }
 }

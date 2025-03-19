@@ -6,20 +6,20 @@ import { attachObjToFn, identity, uniqueDeps } from '../misc/utils'
 import { getCurrentStore } from '../misc/currentStore'
 import { MakeInternals, makeInternals } from '../misc/makeInternals'
 import { pubsub } from '../misc/pubsub'
+import { atom } from './atom'
 
 export type CalledSelect<TSelected = unknown, TNested = {}> = {
   get<TCustomSelected = TSelected>(
     customSelector?: (value: TSelected) => TCustomSelected,
   ): TCustomSelected
+  set(value: TSelected): void
   use<TCustomSelected = TSelected>(
     customSelector?: (value: TSelected) => TCustomSelected,
   ): TCustomSelected
   sub(listener: (value: TSelected) => void): () => void
 } & TNested
 
-export type Select<TParams extends any[], TReturn> = (
-  ...args: TParams
-) => CalledSelect<TReturn>
+export type Select<TArg, TReturn> = (...arg: TArg extends undefined ? [] : [TArg]) => CalledSelect<TReturn>
 
 export type SelectInternals = MakeInternals<{
   type: 'select'
@@ -27,30 +27,21 @@ export type SelectInternals = MakeInternals<{
   depsList: undefined | string[]
   dynamicDeps: boolean
   setup: (name: string) => void
-  // // supplied by store:
-  //  // note: name is not actually used for anything yet
-  // getAll(): Record<string, unknown>
-  // subWithDeps: (
-  //   deps: string[],
-  //   listener: (value: unknown) => void,
-  // ) => () => void
 }>
-
-// export type SelectBrand = (...args: any[]) => Brand<'select'>
 
 const makeGet =
   (
     target: Select<any, any> & SelectInternals,
-    args: any[],
-    selector: (...args: any[]) => any,
+    arg: any,
+    selector: (arg: any) => any,
   ) =>
-  (customSelector?: (...args: any[]) => any) => {
+  (customSelector?: (arg: any) => any) => {
     const targetInternals = target.getInternals()
     const { value: selectedValue, depsList } = callAndTrackDeps(
       {
         trackDeps: !targetInternals.depsList && !targetInternals.dynamicDeps,
       },
-      () => selector(...args),
+      () => selector(arg),
     )
     if (target.getInternals().depsList === undefined) {
       target.setPartialInternals({ depsList })
@@ -62,12 +53,14 @@ const makeGet =
     return value
   }
 
+const makeSet =
+  (arg: any, set: (arg: any, value: any) => void) => (value: any) => {
+    set(arg, value)
+  }
+
 const makeUse =
-  (target: Select<any, any> & SelectInternals, args: any[]) =>
-  (
-    inlineSelector?: (...args: any[]) => any,
-    eqFn?: (a: any, b: any) => boolean,
-  ) => {
+  (target: Select<any, any> & SelectInternals, arg: any) =>
+  (inlineSelector?: (arg: any) => any, eqFn?: (a: any, b: any) => boolean) => {
     const inlineSelectorDepsRef = useRef<undefined | string[]>(undefined)
 
     const subscribe = useMemo(
@@ -107,12 +100,12 @@ const makeUse =
         if (targetInternals.dynamicDeps) {
           return runInlineSelector({
             inlineSelector: () =>
-              (inlineSelector ?? identity)(target(...args).get()),
+              (inlineSelector ?? identity)(target(arg).get()),
             inlineSelectorDepsRef,
             value: undefined,
           })
         }
-        const value = target(...args).get()
+        const value = target(arg).get()
 
         return runInlineSelector({
           inlineSelector,
@@ -125,14 +118,11 @@ const makeUse =
   }
 
 // TODO: custom select fn
-const makeSub =
-  (target: any, args: any[], selector: (...args: any[]) => any) => () => {
-    throw new Error('sub is not implemented for select')
-  }
-
-const makeWith = (target: any) => (apply: (atom: any) => any) => {
-  return apply(target)
+const makeSub = (target: any, arg: any, selector: (arg: any) => any) => () => {
+  throw new Error('sub is not implemented for select')
 }
+
+declare const NoArg: unique symbol
 
 /**
  * Creates a predefined selector that tracks its atom dependencies.
@@ -160,12 +150,16 @@ const makeWith = (target: any) => (apply: (atom: any) => any) => {
  * $.double().use() // in a component
  * $.double().use(x => x * 2, [eqFn]) // in a component, with an inline selector
  * ```
- *
- * Currently, selects do not support set methods.
  */
-export const select = <TParams extends any[], TReturn>(
-  selector: (...args: TParams) => TReturn,
-  { dynamicDeps = false }: { dynamicDeps?: boolean } = {},
+export const select = <TReturn, TArg = undefined>(
+  selector: (arg: TArg) => TReturn,
+  {
+    dynamicDeps = false,
+    set,
+  }: {
+    dynamicDeps?: boolean
+    set?: (arg: TArg, value: TReturn) => void
+  } = {},
 ) => {
   const store = getCurrentStore()
 
@@ -179,16 +173,19 @@ export const select = <TParams extends any[], TReturn>(
   })
 
   const target = attachObjToFn(
-    (...args: any[]) => {
+    (arg: any) => {
       return {
         get: (...pass: Parameters<ReturnType<typeof makeGet>>) =>
-          makeGet(target as any, args, selector)(...pass),
+          makeGet(target as any, arg, selector)(...pass),
+
+        set: (...pass: Parameters<ReturnType<typeof makeSet>>) =>
+          makeSet(arg, set ?? identity)(...pass),
 
         use: (...pass: Parameters<ReturnType<typeof makeUse>>) =>
-          makeUse(target as any, args)(...pass),
+          makeUse(target as any, arg)(...pass),
 
         sub: (...pass: Parameters<ReturnType<typeof makeSub>>) =>
-          makeSub(target, args, selector)(...pass),
+          makeSub(target, arg, selector)(...pass),
       }
     },
     {
@@ -196,5 +193,5 @@ export const select = <TParams extends any[], TReturn>(
     },
   )
 
-  return target as any as Select<TParams, TReturn>
+  return target as any as Select<TArg, TReturn>
 }
